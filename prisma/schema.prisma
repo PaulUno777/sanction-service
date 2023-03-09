@@ -1,0 +1,148 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Sanctioned {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  Sanction SanctionList @relation(fields: [listId], references: [id])
+  listId   String       @db.ObjectId
+
+  firstName    String?
+  middleName   String?
+  lastName     String?
+  title        String?
+  type         String?
+  remark       String?
+  gender       Gender?
+  designation  String?
+  motive       String?
+  reference    String?
+  referenceUe  String?  @map("reference_ue")
+  referenceOnu String?  @map("reference_onu")
+  unListType   String?  @map("un_list_type")
+  listedOn     String?  @map("listed_on")
+  listType     String?  @map("list_type")
+  submittedBy  String?  @map("submitted_by")
+  originalName String?  @map("original_name")
+  otherNames   String[] @default([])
+
+  akas          AkaList[]
+  nationalities NationalityList[]
+  citizenships  CitizenshipList[]
+  placesOfbirth  PlaceOfBirthList[]
+  datesOfBirth   DateOfBirthList[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model PlaceOfBirthList {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctionedId String     @db.ObjectId
+
+  place           String?
+  city            String?
+  stateOrProvince String?
+  postalCode      String?
+  zipCode         String?
+  country         String?
+  mainEntry       Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model DateOfBirthList {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctionedId String     @db.ObjectId
+
+  date      DateOfBith
+  mainEntry Int        @default(1)
+  comment   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model NationalityList {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctionedId String     @db.ObjectId
+
+  country   String?
+  code      String?
+  mainEntry Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model CitizenshipList {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctionedId String     @db.ObjectId
+
+  country   String?
+  code      String?
+  mainEntry Int?    @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model AkaList {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctionedId String     @db.ObjectId
+
+  category   String?
+  type       String?
+  firstName  String?
+  middleName String?
+  lastName   String?
+  comment    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model SanctionList {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name            String
+  publicationDate DateTime? @db.Date
+  file            String?
+  numberOfLine    Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  santioned Sanctioned[]
+}
+
+enum Gender {
+  M
+  F
+}
+
+type DateOfBith {
+  day   String?
+  month String?
+  year  String?
+}
