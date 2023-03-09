@@ -17,13 +17,13 @@ export class MigrationService {
   //=========Main method for all Migrations================
   async migrateAllToMongo() {
     const result = Promise.all([
-      //await this.migrateSantionToMongo(),
-      //await this.migrateSantionedToMongo(),
+      await this.migrateSantionToMongo(),
+      await this.migrateSantionedToMongo(),
       this.migrateNationalityListToMongo(),
-      //this.migrateCitizenshipListToMongo(),
-      //this.migrateDateOfBirthListToMongo(),
-      //this.migratePlaceOfBirthListToMongo(),
-      //this.migrateAkaListToMongo(),
+      this.migrateCitizenshipListToMongo(),
+      this.migrateDateOfBirthListToMongo(),
+      this.migratePlaceOfBirthListToMongo(),
+      this.migrateAkaListToMongo(),
     ]);
 
     return result;
@@ -32,13 +32,13 @@ export class MigrationService {
   //=========Main method for all Updates================
   async updateAllToMongo() {
     const result = Promise.all([
-      //await this.updateSantionToMongo(),
+      await this.updateSantionToMongo(),
       await this.updateSantionedToMongo(),
-      //this.updateNationalityListToMongo(),
-      //this.updateCitizenshipListToMongo(),
-      //this.updateDateOfBirthListToMongo(),
-      //this.updatePlaceOfBirthListToMongo(),
-      //this.updateAkaListToMongo(),
+      this.updateNationalityListToMongo(),
+      this.updateCitizenshipListToMongo(),
+      this.updateDateOfBirthListToMongo(),
+      this.updatePlaceOfBirthListToMongo(),
+      this.updateAkaListToMongo(),
     ]);
     return result;
   }
@@ -46,6 +46,7 @@ export class MigrationService {
   //==== Method for sanctionList migration =========================
   //------ Make migration --------
   async migrateSantionToMongo() {
+    this.logger.log('migrating sanctionList to MongoDB...');
     //Get data from MYSQL
     const connection = await this.mysqlConnect();
     const querie = 'SELECT * FROM sanction_lists';
@@ -64,8 +65,6 @@ export class MigrationService {
         createdAt: elt.created_at,
       };
     });
-
-    this.logger.log('migrating sanctionList to MongoDB...');
     //insert one element to apply MongoDB collection
     const { id, ...newData } = cleanData[0];
     await this.prisma.sanctionList.create({
