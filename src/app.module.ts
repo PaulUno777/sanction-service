@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { MigrationModule } from './migration/migration.module';
 import { SanctionedModule } from './sanctioned/sanctioned.module';
 import { SearchModule } from './search/search.module';
+import { SanctionModule } from './sanction/sanction.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { SearchModule } from './search/search.module';
     MigrationModule,
     SanctionedModule,
     SearchModule,
+    SanctionModule,
   ],
   providers: [],
 })
