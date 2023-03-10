@@ -4,6 +4,7 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
 import { PrismaModule } from './prisma/prisma.module';
 import { MigrationModule } from './migration/migration.module';
 import { SanctionedModule } from './sanctioned/sanctioned.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { SanctionedModule } from './sanctioned/sanctioned.module';
     PrismaModule,
     MigrationModule,
     SanctionedModule,
+    SearchModule,
   ],
   providers: [],
 })

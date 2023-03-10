@@ -105,6 +105,7 @@ export class SanctionedService {
   }
 
   async findOne(id: string) {
+    this.logger.log(`finding by id ... \n id = ${id}`);
     const sanctionedData = await this.prisma.sanctioned.findUnique({
       include: {
         akas: true,
