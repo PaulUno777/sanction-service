@@ -9,9 +9,10 @@ import {
   Param,
   StreamableFile,
   Response,
+  Query,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
+import { ApiExcludeEndpoint, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { createReadStream } from 'fs';
 import { SearchParamDto } from './dto/search.param.dto';
 import { SearchService } from './search.service';
@@ -25,9 +26,55 @@ export class SearchController {
     private config: ConfigService,
   ) {}
 
+  @ApiQuery({
+    name: 'text',
+    description: 'text to search',
+    required: true,
+    type: 'string',
+  })
   @Get()
-  search() {
-    // return this.searchService.findAll();
+  search(@Query() query: Record<string, any>) {
+    return this.searchService.searchSimple(String(query.text));
+  }
+  @Get('filter')
+  getFilter() {
+    return [
+      {
+        name: 'dob',
+        paramType: 'body',
+        type: 'string',
+        valueSet: null,
+        exemple: '1963-03',
+      },
+      {
+        name: 'nationality',
+        paramType: 'body',
+        type: 'array<string>',
+        valueSet: null,
+        exemple: '[rus, fr]',
+      },
+      {
+        name: 'sanctionId',
+        paramType: 'body',
+        type: 'string',
+        valueSet: null,
+        exemple: 'xxxxxxxxxxxxxxxxxxxxxx',
+      },
+      {
+        name: 'type',
+        paramType: 'body',
+        type: 'string',
+        valueSet: ['person', 'Entity', 'Individual'],
+        exemple: '[rus, fr]',
+      },
+      {
+        name: 'matchRate',
+        paramType: 'body',
+        type: 'number',
+        valueSet: [50, 60, 70, 80],
+        exemple: 50,
+      },
+    ];
   }
 
   @Post()

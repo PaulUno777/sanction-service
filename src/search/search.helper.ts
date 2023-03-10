@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { ConfigService } from '@nestjs/config';
 import * as i18nIsoCountries from 'i18n-iso-countries';
@@ -50,7 +50,7 @@ export class SearchHelper {
       firstName: result.entity.firstName,
       middleName: result.entity.middleName,
       lastName: result.entity.lastName,
-      type: result.type,
+      type: result.entity.type,
       originalName: result.entity.original_name,
       otherNames: result.entity.otherNames,
       sanction: {
@@ -106,20 +106,23 @@ export class SearchHelper {
     return filtered;
   }
 
-  // merge akalist and sanctioned
-  mergeSearch(array1: any[], array2: any[]) {
-    this.logger.log('Merging arrays and sort by score ...');
-    const cleanData: any[] = array1.concat(array2);
-    cleanData.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
-    return cleanData;
-  }
-
   //Apply nationality and date of birth filters to retrieved data
   async filterCompleteSearch(response: any[], body: SearchParamDto) {
     let filteredData = response;
 
+    //check if sanctionId is provided in request parameters
+    if (typeof body.sanctionId == 'string') {
+      this.logger.log('====== Filtering by sanction...');
+      filteredData = filteredData.filter((value) => {
+        return (value.entity.sanction.id = body.sanctionId);
+      });
+    }
+
     if (body.dob) {
-      this.logger.log('====== Filtering by date...');
+      this.logger.log('====== Filtering by date of birth...');
+      if (body.dob.length != 4 && body.dob.length != 7)
+        throw new BadRequestException('dob value must be YYYY-MM or YYYY');
+
       const tempData = [];
       let check: boolean;
       response.forEach((value: any) => {
