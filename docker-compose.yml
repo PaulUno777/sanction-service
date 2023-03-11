@@ -1,8 +1,8 @@
 version: "3"
 services:
   server:
-    container_name: kMX-sanction-service
-    image: unoteck/KMX-sanction-service
+    container_name: kmx-sanction-service
+    image: unoteck/kmx-sanction-service
     env_file:
       - .env
     ports:
