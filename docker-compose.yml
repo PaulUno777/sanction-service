@@ -1,10 +1,10 @@
 version: "3"
 services:
   server:
-    container_name: kamix-sanction-service
-    image: unoteck/kamix-sanction-service
+    container_name: kMX-sanction-service
+    image: unoteck/KMX-sanction-service
     env_file:
       - .env
     ports:
       - 3000:3000
-      - 5900:3000
+      - 5250:3000
