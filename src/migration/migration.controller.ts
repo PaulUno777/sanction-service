@@ -9,7 +9,7 @@ export class MigrationController {
 
   @Get()
   async migrate() {
-    return this.migrationService.migrateAllToMongo();
+    this.migrationService.migrateAllToMongo();
   }
 
   @Get('update')

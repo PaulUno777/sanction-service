@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mysql = require('mysql2/promise');
+import { MongoClient } from 'mongodb';
 
 @Injectable()
 export class MigrationService {
@@ -16,7 +17,7 @@ export class MigrationService {
 
   //=========Main method for all Migrations================
   async migrateAllToMongo() {
-    const result = Promise.all([
+    const result = await Promise.all([
       await this.migrateSantionToMongo(),
       await this.migrateSantionedToMongo(),
       this.migrateNationalityListToMongo(),
@@ -26,12 +27,13 @@ export class MigrationService {
       this.migrateAkaListToMongo(),
     ]);
 
+    this.logger.log('All is well !');
     return result;
   }
 
   //=========Main method for all Updates================
   async updateAllToMongo() {
-    const result = Promise.all([
+    const result = await Promise.all([
       await this.updateSantionToMongo(),
       await this.updateSantionedToMongo(),
       this.updateNationalityListToMongo(),
@@ -40,6 +42,8 @@ export class MigrationService {
       this.updatePlaceOfBirthListToMongo(),
       this.updateAkaListToMongo(),
     ]);
+
+    this.logger.log('All is well !');
     return result;
   }
 
@@ -72,10 +76,10 @@ export class MigrationService {
     });
 
     //delete all elements in collection
-    const deleted = await this.prisma.sanctionList.deleteMany({});
-    this.logger.log({
-      message: `${Number(deleted.count)} element(s) deleted`,
-    });
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('SanctionList', client).finally(() =>
+      client.close(),
+    );
 
     //migrate all to MongoDB
     let data: any[];
@@ -204,10 +208,10 @@ export class MigrationService {
     });
 
     //delete all elements in collection
-    const deleted = await this.prisma.sanctioned.deleteMany({});
-    this.logger.log({
-      message: `${Number(deleted.count)} element(s) deleted`,
-    });
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('Sanctioned', client).finally(() =>
+      client.close(),
+    );
 
     //migrate all to MongoDB
     //push data in data in batches of 1000 to avoid errors and timeouts
@@ -303,10 +307,10 @@ export class MigrationService {
     });
 
     //delete all elements in collection
-    const deleted = await this.prisma.nationalityList.deleteMany({});
-    this.logger.log({
-      message: `${Number(deleted.count)} element(s) deleted (Nationalities)`,
-    });
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('NationalityList', client).finally(() =>
+      client.close(),
+    );
 
     //push data in data in batches of 1000 to avoid errors and timeouts
     let data: any[];
@@ -405,11 +409,12 @@ export class MigrationService {
     await this.prisma.citizenshipList.create({
       data: newData,
     });
+
     //delete all elements in collection
-    const deleted = await this.prisma.citizenshipList.deleteMany({});
-    this.logger.log({
-      message: `${Number(deleted.count)} element(s) deleted (Citizenships)`,
-    });
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('CitizenshipList', client).finally(() =>
+      client.close(),
+    );
 
     let data: any[];
     let result;
@@ -509,10 +514,10 @@ export class MigrationService {
     });
 
     //delete all elements in collection
-    const deleted = await this.prisma.dateOfBirthList.deleteMany({});
-    this.logger.log({
-      message: `${Number(deleted.count)} element(s) deleted (DatesOfBirth)`,
-    });
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('DateOfBirthList', client).finally(() =>
+      client.close(),
+    );
 
     let data: any[];
     let result;
@@ -614,10 +619,10 @@ export class MigrationService {
     });
 
     //delete all elements in collection
-    const deleted = await this.prisma.placeOfBirthList.deleteMany({});
-    this.logger.log({
-      message: `${Number(deleted.count)} element(s) deleted (PlacesOfBirth)`,
-    });
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('PlaceOfBirthList', client).finally(() =>
+      client.close(),
+    );
 
     let data: any[];
     let result;
@@ -728,10 +733,8 @@ export class MigrationService {
     });
 
     //delete all elements in collection
-    const deleted = await this.prisma.akaList.deleteMany({});
-    this.logger.log({
-      message: `${Number(deleted.count)} element(s) deleted (AkasList)`,
-    });
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('AkaList', client).finally(() => client.close());
 
     let data: any[];
     let result;
@@ -838,7 +841,7 @@ export class MigrationService {
 
   //Timestamp tranform to string
   transformDate(date: Date): string {
-    const TIME_ZONE = this.config.get('TIME_ZONE') ?? 0;
+    const TIME_ZONE = this.config.get('TIME_ZONE') || 0;
     const timeZone = Number(TIME_ZONE);
     date.setTime(date.getTime() + timeZone * 60 * 60 * 1000);
     return date.toISOString().slice(0, 19).replace('T', ' ');
@@ -894,5 +897,20 @@ export class MigrationService {
         }
       }
     }
+  }
+
+  getMongoClient() {
+    const url = this.config.get('DATABASE_URL');
+    const client = new MongoClient(url);
+    return client;
+  }
+
+  async mongoDeleteMany(collection: string, client: MongoClient) {
+    await client.connect();
+    console.log('Connected successfully to server');
+    const database = client.db('sanctionsexplorer');
+    const col = database.collection(collection);
+    const deleted = (await col.deleteMany({})).deletedCount;
+    return `${Number(deleted)} element(s) deleted`;
   }
 }

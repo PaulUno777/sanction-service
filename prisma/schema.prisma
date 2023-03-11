@@ -38,8 +38,8 @@ model Sanctioned {
   akas          AkaList[]
   nationalities NationalityList[]
   citizenships  CitizenshipList[]
-  placesOfbirth  PlaceOfBirthList[]
-  datesOfBirth   DateOfBirthList[]
+  placesOfbirth PlaceOfBirthList[]
+  datesOfBirth  DateOfBirthList[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -48,7 +48,7 @@ model Sanctioned {
 model PlaceOfBirthList {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
   sanctionedId String     @db.ObjectId
 
   place           String?
@@ -66,7 +66,7 @@ model PlaceOfBirthList {
 model DateOfBirthList {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
   sanctionedId String     @db.ObjectId
 
   date      DateOfBith
@@ -80,7 +80,7 @@ model DateOfBirthList {
 model NationalityList {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
   sanctionedId String     @db.ObjectId
 
   country   String?
@@ -94,7 +94,7 @@ model NationalityList {
 model CitizenshipList {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
   sanctionedId String     @db.ObjectId
 
   country   String?
@@ -108,7 +108,7 @@ model CitizenshipList {
 model AkaList {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id])
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
   sanctionedId String     @db.ObjectId
 
   category   String?
@@ -146,4 +146,3 @@ type DateOfBith {
   month String?
   year  String?
 }
-
