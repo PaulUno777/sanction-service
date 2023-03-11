@@ -14,19 +14,21 @@ export class SanctionedService {
     page?: number,
     limit?: number,
     orderBy?: OrderByType,
-    sanction?: string,
+    sanctionId?: string,
   ): Promise<any> {
     this.logger.log('finding all sanctioned ordered and paginated...');
-    if (
-      typeof page !== 'number' ||
-      typeof limit !== 'number' ||
-      typeof orderBy !== 'string' ||
-      typeof sanction !== 'string' ||
-      sanction.length < 32
-    )
-      throw new BadRequestException(
-        'You must provide the right parameters and types',
-      );
+    if (sanctionId) {
+      if (sanctionId.length != 24)
+        throw new BadRequestException('sanctionId length must be equal to 24');
+    }
+    if (limit) {
+      if (typeof limit != 'number')
+        throw new BadRequestException('limit length must a number');
+    }
+    if (page) {
+      if (typeof page != 'number')
+        throw new BadRequestException('page length must a number');
+    }
 
     //Elements per page
     const PER_PAGE = limit || 20;
@@ -50,10 +52,10 @@ export class SanctionedService {
     //get elements with their corresponding sanction
 
     let queryOptions;
-    if (sanction) {
+    if (sanctionId) {
       queryOptions = {
         where: {
-          listId: sanction,
+          listId: sanctionId,
         },
         orderBy: ordener,
         include: {
