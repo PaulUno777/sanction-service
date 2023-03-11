@@ -40,7 +40,7 @@ echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;'''
       parallel {
         stage('Build app') {
           steps {
-            sh 'docker build -t unoteck/kamix-sanction-service .'
+            sh 'docker build -t unoteck/KMX-sanction-service .'
           }
         }
 
