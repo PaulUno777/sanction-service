@@ -74,7 +74,7 @@ echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;'''
         DOWNLOAD_URL = 'http://sandbox.kamix.io:3000/api/search/download/'
       }
       steps {
-        sh 'docker rm --force --volumes kamix-sanction-service'
+        sh 'docker rm --force --volumes kmx-sanction-service'
         sh '''docker compose up --wait
 '''
       }
