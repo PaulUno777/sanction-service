@@ -82,7 +82,7 @@ echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;'''
 
     stage('Get app Log') {
       steps {
-        sh 'docker container logs kamix-sanction-service'
+        sh 'docker container logs kmx-sanction-service'
       }
     }
 
