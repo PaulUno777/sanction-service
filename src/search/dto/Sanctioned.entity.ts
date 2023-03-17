@@ -15,6 +15,7 @@ export class SanctionedEntity {
   firstName: string;
   middleName: string;
   lastName: string;
+  defaultName: string;
   type: string;
   originalName: string;
   otherNames: Array<string>;
