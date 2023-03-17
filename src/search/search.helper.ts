@@ -42,6 +42,8 @@ export class SearchHelper {
       tempFullName.push(lastName);
     }
 
+    names.push(result.entity.defaultName);
+
     if (tempFullName.length > 0) {
       fullName = tempFullName.join(' ');
       if (!names.includes(fullName)) names.push(fullName);
@@ -86,9 +88,7 @@ export class SearchHelper {
         }
       }
     }
-
-    const finalResult = names.concat(result.entity.otherNames);
-    return finalResult;
+    return names;
   }
 
   // map aka data into sanctionedDto
