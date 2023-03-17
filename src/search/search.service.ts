@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SearchParamDto } from './dto/search.param.dto';
 import { SearchHelper } from './search.helper';
-
 @Injectable()
 export class SearchService {
   private readonly logger = new Logger(SearchService.name);
@@ -18,31 +17,25 @@ export class SearchService {
 
   async searchfiltered(body: SearchParamDto) {
     this.logger.log('Filtered searching ...');
-
     console.log(body);
-    let matchRate = 0.5;
-    if (body.matchRate && typeof body.matchRate == 'number') {
-      const rates = [50, 60, 70, 80];
-      if (rates.includes(body.matchRate)) {
-        matchRate = body.matchRate / 100;
-      } else {
+    let matchRate = 0.4;
+    if (body.matchRate) {
+      const rates = [40, 50, 60, 70, 80];
+      if (
+        !rates.includes(body.matchRate) ||
+        typeof body.matchRate != 'number'
+      ) {
         throw new BadRequestException(
-          'matchRate must be a number in the set [50, 60, 70, 80]',
+          'Invalid parameter ! matchRate must be a number in the set [50, 60, 70, 80]',
         );
+      } else {
+        matchRate = body.matchRate / 100;
       }
     }
-    if (typeof body.sanctionId == 'string') {
-      if (body.sanctionId.length != 24)
-        throw new BadRequestException('Invalid sanctionId');
-    }
-
-    if (typeof body.fullName != 'string' || body.fullName.length <= 3)
-      throw new BadRequestException('You must provide real fullname to search');
-
-    //Request query to mongoDB
-    //----sanctioned
+    ////$ $ $ $ $  SANCTIONED $ $ $ $ $ $
     const sanctionedPipeline: any = [
       {
+        //search
         $search: {
           index: 'sanctionned_index',
           text: {
@@ -60,15 +53,31 @@ export class SearchService {
           },
         },
       },
+      //sanction
       {
         $lookup: {
           from: 'SanctionList',
           localField: 'listId',
           foreignField: '_id',
-          pipeline: [{ $project: { name: 1 } }],
+          pipeline: [
+            { $project: { _id: 0, id: { $toString: '$_id' }, name: 1 } },
+          ],
           as: 'sanction',
         },
       },
+      //alias
+      {
+        $lookup: {
+          from: 'AkaList',
+          localField: '_id',
+          foreignField: 'sanctionedID',
+          pipeline: [
+            { $project: { _id: 0, firstName: 1, middleName: 1, lastName: 1 } },
+          ],
+          as: 'alias',
+        },
+      },
+      //dateOfBirth
       {
         $lookup: {
           from: 'DateOfBirthList',
@@ -83,11 +92,12 @@ export class SearchService {
                 },
               },
             },
-            { $project: { date: 1 } },
+            { $project: { _id: 0, date: 1 } },
           ],
           as: 'dateOfBirth',
         },
       },
+      //nationality
       {
         $lookup: {
           from: 'NationalityList',
@@ -102,11 +112,12 @@ export class SearchService {
                 },
               },
             },
-            { $project: { country: 1, code: 1 } },
+            { $project: { _id: 0, country: 1, code: 1 } },
           ],
           as: 'nationality',
         },
       },
+      //limit
       {
         $addFields: {
           searchScore: { $meta: 'searchScore' },
@@ -115,23 +126,25 @@ export class SearchService {
       {
         $setWindowFields: {
           output: {
-            searchMaxScore: { $max: '$searchScore' },
+            searchScoreMax: { $max: '$searchScore' },
           },
         },
       },
       {
         $addFields: {
-          searchNormalizedScore: {
-            $divide: ['$searchScore', '$searchMaxScore'],
+          normalizedScore: {
+            $divide: ['$searchScore', '$searchScoreMax'],
           },
         },
       },
       {
-        $match: { searchNormalizedScore: { $gte: matchRate } },
+        $match: { normalizedScore: { $gte: matchRate } },
       },
     ];
 
+    //$ $ $ $ $  AKA $ $ $ $ $ $
     const akaPipeline: any = [
+      //search
       {
         $search: {
           index: 'sanctioned_aka_index',
@@ -144,6 +157,7 @@ export class SearchService {
           },
         },
       },
+      //sanctioned
       {
         $lookup: {
           from: 'Sanctioned',
@@ -160,34 +174,69 @@ export class SearchService {
             },
             {
               $project: {
-                listId: 1,
+                _id: 0,
+                id: { $toString: '$_id' },
+                listId: { $toString: '$listId' },
                 firstName: 1,
                 middleName: 1,
-                type: 1,
                 lastName: 1,
+                defaultName: 1,
                 original_name: 1,
                 otherNames: 1,
+                type: 1,
               },
             },
           ],
           as: 'sanctioned',
         },
       },
+      //sanctioned as objet
+      {
+        $addFields: {
+          sanctionedObject: { $arrayElemAt: ['$sanctioned', 0] },
+        },
+      },
+      //sanction
       {
         $lookup: {
           from: 'SanctionList',
-          localField: 'sanctioned.0.listId',
-          foreignField: '_id',
+          let: {
+            id: { $toObjectId: '$sanctionedObject.listId' },
+          },
           as: 'sanction',
           pipeline: [
             {
-              $project: {
-                name: 1,
+              $match: {
+                $expr: {
+                  $eq: ['$_id', '$$id'],
+                },
               },
             },
+            { $project: { _id: 0, id: { $toString: '$_id' }, name: 1 } },
           ],
         },
       },
+      //alias
+      {
+        $lookup: {
+          from: 'AkaList',
+          let: {
+            id: { $toObjectId: '$sanctionedObject.id' },
+          },
+          as: 'alias',
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$sanctionedId', '$$id'],
+                },
+              },
+            },
+            { $project: { _id: 0, firstName: 1, middleName: 1, lastName: 1 } },
+          ],
+        },
+      },
+      //dateOfBirth
       {
         $lookup: {
           from: 'DateOfBirthList',
@@ -212,6 +261,7 @@ export class SearchService {
           as: 'dateOfBirth',
         },
       },
+      //nationality
       {
         $lookup: {
           from: 'NationalityList',
@@ -237,35 +287,28 @@ export class SearchService {
           as: 'nationality',
         },
       },
+      //limit
       {
         $addFields: {
-          searchScore: {
-            $meta: 'searchScore',
-          },
+          searchScore: { $meta: 'searchScore' },
         },
       },
       {
         $setWindowFields: {
           output: {
-            searchMaxScore: {
-              $max: '$searchScore',
-            },
+            searchScoreMax: { $max: '$searchScore' },
           },
         },
       },
       {
         $addFields: {
-          searchNormalizedScore: {
-            $divide: ['$searchScore', '$searchMaxScore'],
+          normalizedScore: {
+            $divide: ['$searchScore', '$searchScoreMax'],
           },
         },
       },
       {
-        $match: {
-          searchNormalizedScore: {
-            $gte: matchRate,
-          },
-        },
+        $match: { normalizedScore: { $gte: matchRate } },
       },
     ];
 
@@ -277,20 +320,38 @@ export class SearchService {
         this.helper.toCapitalizeWord(body.type) != 'Person'
       ) {
         throw new BadRequestException(
-          'type value must be Individual or Entity',
+          'type value must be Individual person or Entity',
         );
       }
       sanctionedPipeline.push({
         $match: {
           $expr: {
-            $eq: [{ $strcasecmp: ['$type', body.type] }, 0],
+            $eq: [
+              {
+                $regexMatch: {
+                  input: '$type',
+                  regex: body.type,
+                  options: 'i',
+                },
+              },
+              true,
+            ],
           },
         },
       });
       akaPipeline.push({
         $match: {
           $expr: {
-            $eq: [{ $strcasecmp: ['$sanctionedObject.type', body.type] }, 0],
+            $eq: [
+              {
+                $regexMatch: {
+                  input: '$sanctionedObject.type',
+                  regex: body.type,
+                  options: 'i',
+                },
+              },
+              true,
+            ],
           },
         },
       });
@@ -298,25 +359,29 @@ export class SearchService {
 
     sanctionedPipeline.push({
       $project: {
-        listId: 1,
-        firstName: 1,
-        middleName: 1,
-        lastName: 1,
-        original_name: 1,
-        otherNames: 1,
-        type: 1,
+        _id: 0,
+        entity: {
+          id: { $toString: '$_id' },
+          listId: { $toString: '$listId' },
+          firstName: '$firstName',
+          middleName: '$middleName',
+          lastName: '$lastName',
+          defaultName: '$defaultName',
+          original_name: '$original_name',
+          otherNames: '$otherNames',
+          type: '$type',
+        },
         sanction: {
           $arrayElemAt: ['$sanction', 0],
         },
+        alias: '$alias',
         dateOfBirth: {
           $arrayElemAt: ['$dateOfBirth', 0],
         },
         nationality: {
           $arrayElemAt: ['$nationality', 0],
         },
-        initialScore: '$searchScore',
-        maxScore: '$searchMaxScore',
-        score: '$searchNormalizedScore',
+        scoreAtlas: '$normalizedScore',
       },
     });
 
@@ -329,15 +394,14 @@ export class SearchService {
         sanction: {
           $arrayElemAt: ['$sanction', 0],
         },
+        alias: '$alias',
         dateOfBirth: {
           $arrayElemAt: ['$dateOfBirth', 0],
         },
         nationality: {
           $arrayElemAt: ['$nationality', 0],
         },
-        initialScore: '$searchScore',
-        maxScore: '$searchMaxScore',
-        score: '$searchNormalizedScore',
+        scoreAtlas: '$normalizedScore',
       },
     });
 
@@ -353,26 +417,15 @@ export class SearchService {
       pipeline: akaPipeline,
     });
 
-    this.logger.log('(success !) searching');
+    // merge akalist and sanctioned  and remove duplicate data and map
+    const cleanedData = await this.helper.cleanSearch(
+      sanctionedResult,
+      akaResult,
+      body.fullName,
+    );
 
-    // map data
-    //---- sanctioned
-    const sanctionedClean: any[] = await sanctionedResult.map((elt) => {
-      const cleanData = this.helper.mapSanctioned(elt);
-      return cleanData;
-    });
-    //---- akaList
-    const akaClean: any[] = await akaResult.map((elt) => {
-      const cleanData = this.helper.mapAka(elt);
-      return cleanData;
-    });
-
-    //merge sanctioned and aka results into one array
-    this.logger.log('Merging and appliying nationality && date filters ...');
-    //------ merge results
-    const cleanData = await this.helper.cleanSearch(sanctionedClean, akaClean);
     //------ apply filters on results
-    const filtered = await this.helper.filterCompleteSearch(cleanData, body);
+    const filtered = await this.helper.filterCompleteSearch(cleanedData, body);
 
     //check if no results
     if (filtered.length <= 0) {
@@ -412,6 +465,7 @@ export class SearchService {
     //----sanctioned
     const sanctionedPipeline: any = [
       {
+        //search
         $search: {
           index: 'sanctionned_index',
           text: {
@@ -429,156 +483,37 @@ export class SearchService {
           },
         },
       },
+      //sanction
       {
         $lookup: {
           from: 'SanctionList',
           localField: 'listId',
           foreignField: '_id',
-          pipeline: [{ $project: { name: 1 } }],
+          pipeline: [
+            { $project: { _id: 0, id: { $toString: '$_id' }, name: 1 } },
+          ],
           as: 'sanction',
         },
       },
+      //alias
+      {
+        $lookup: {
+          from: 'AkaList',
+          localField: '_id',
+          foreignField: 'sanctionedID',
+          pipeline: [
+            { $project: { _id: 0, firstName: 1, middleName: 1, lastName: 1 } },
+          ],
+          as: 'alias',
+        },
+      },
+      //dateOfBirth
       {
         $lookup: {
           from: 'DateOfBirthList',
           let: {
             id: '$_id',
           },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $eq: ['$sanctionedId', '$$id'],
-                },
-              },
-            },
-            { $project: { date: 1 } },
-          ],
-          as: 'dateOfBirth',
-        },
-      },
-      {
-        $lookup: {
-          from: 'NationalityList',
-          let: {
-            id: '$_id',
-          },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $eq: ['$sanctionedId', '$$id'],
-                },
-              },
-            },
-            { $project: { country: 1, code: 1 } },
-          ],
-          as: 'nationality',
-        },
-      },
-      {
-        $addFields: {
-          searchScore: { $meta: 'searchScore' },
-        },
-      },
-      {
-        $setWindowFields: {
-          output: {
-            searchMaxScore: { $max: '$searchScore' },
-          },
-        },
-      },
-      {
-        $addFields: {
-          searchNormalizedScore: {
-            $divide: ['$searchScore', '$searchMaxScore'],
-          },
-        },
-      },
-      {
-        $match: { searchNormalizedScore: { $gte: 0.5 } },
-      },
-      {
-        $project: {
-          listId: 1,
-          firstName: 1,
-          middleName: 1,
-          lastName: 1,
-          original_name: 1,
-          otherNames: 1,
-          type: 1,
-          sanction: {
-            $arrayElemAt: ['$sanction', 0],
-          },
-          dateOfBirth: {
-            $arrayElemAt: ['$dateOfBirth', 0],
-          },
-          nationality: {
-            $arrayElemAt: ['$nationality', 0],
-          },
-          initialScore: '$searchScore',
-          maxScore: '$searchMaxScore',
-          score: '$searchNormalizedScore',
-        },
-      },
-    ];
-
-    //----aka
-    const akaPipeline: any = [
-      {
-        $search: {
-          index: 'sanctioned_aka_index',
-          text: {
-            query: text,
-            path: ['firstName', 'lastName', 'middleName'],
-            fuzzy: {
-              maxEdits: 2,
-            },
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: 'Sanctioned',
-          let: {
-            id: '$sanctionedId',
-          },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $eq: ['$_id', '$$id'],
-                },
-              },
-            },
-            {
-              $project: {
-                listId: 1,
-                firstName: 1,
-                middleName: 1,
-                type: 1,
-                lastName: 1,
-                original_name: 1,
-                otherNames: 1,
-              },
-            },
-          ],
-          as: 'sanctioned',
-        },
-      },
-      {
-        $lookup: {
-          from: 'SanctionList',
-          localField: 'sanctioned.0.listId',
-          foreignField: '_id',
-          as: 'sanction',
-          pipeline: [{ $project: { name: 1 } }],
-        },
-      },
-      {
-        $lookup: {
-          from: 'DateOfBirthList',
-          let: { id: '$sanctionedId' },
           pipeline: [
             {
               $match: {
@@ -592,11 +527,12 @@ export class SearchService {
           as: 'dateOfBirth',
         },
       },
+      //nationality
       {
         $lookup: {
           from: 'NationalityList',
           let: {
-            id: '$sanctionedId',
+            id: '$_id',
           },
           pipeline: [
             {
@@ -611,6 +547,7 @@ export class SearchService {
           as: 'nationality',
         },
       },
+      //limit
       {
         $addFields: {
           searchScore: { $meta: 'searchScore' },
@@ -619,19 +556,155 @@ export class SearchService {
       {
         $setWindowFields: {
           output: {
-            searchMaxScore: { $max: '$searchScore' },
+            searchScoreMax: { $max: '$searchScore' },
           },
         },
       },
       {
         $addFields: {
-          searchNormalizedScore: {
-            $divide: ['$searchScore', '$searchMaxScore'],
+          normalizedScore: {
+            $divide: ['$searchScore', '$searchScoreMax'],
           },
         },
       },
       {
-        $match: { searchNormalizedScore: { $gte: 0.5 } },
+        $match: { normalizedScore: { $gte: 0.4 } },
+      },
+      {
+        $project: {
+          _id: 0,
+          entity: {
+            id: { $toString: '$_id' },
+            listId: { $toString: '$listId' },
+            firstName: '$firstName',
+            middleName: '$middleName',
+            lastName: '$lastName',
+            original_name: '$original_name',
+            otherNames: '$otherNames',
+            type: '$type',
+          },
+          sanction: {
+            $arrayElemAt: ['$sanction', 0],
+          },
+          alias: '$alias',
+          dateOfBirth: {
+            $arrayElemAt: ['$dateOfBirth', 0],
+          },
+          nationality: {
+            $arrayElemAt: ['$nationality', 0],
+          },
+          scoreAtlas: '$normalizedScore',
+        },
+      },
+    ];
+
+    //----aka
+    const akaPipeline: any = [
+      {
+        //search
+        $search: {
+          index: 'sanctionned_index',
+          text: {
+            query: text,
+            path: [
+              'firstName',
+              'lastName',
+              'middleName',
+              'originalName',
+              'otherNames',
+            ],
+            fuzzy: {
+              maxEdits: 2,
+            },
+          },
+        },
+      },
+      //sanction
+      {
+        $lookup: {
+          from: 'SanctionList',
+          localField: 'listId',
+          foreignField: '_id',
+          pipeline: [
+            { $project: { _id: 0, id: { $toString: '$_id' }, name: 1 } },
+          ],
+          as: 'sanction',
+        },
+      },
+      //alias
+      {
+        $lookup: {
+          from: 'AkaList',
+          localField: '_id',
+          foreignField: 'sanctionedID',
+          pipeline: [
+            { $project: { _id: 0, firstName: 1, middleName: 1, lastName: 1 } },
+          ],
+          as: 'alias',
+        },
+      },
+      //dateOfBirth
+      {
+        $lookup: {
+          from: 'DateOfBirthList',
+          let: {
+            id: '$_id',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$sanctionedId', '$$id'],
+                },
+              },
+            },
+            { $project: { _id: 0, date: 1 } },
+          ],
+          as: 'dateOfBirth',
+        },
+      },
+      //nationality
+      {
+        $lookup: {
+          from: 'NationalityList',
+          let: {
+            id: '$_id',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$sanctionedId', '$$id'],
+                },
+              },
+            },
+            { $project: { _id: 0, country: 1, code: 1 } },
+          ],
+          as: 'nationality',
+        },
+      },
+      //limit
+      {
+        $addFields: {
+          searchScore: { $meta: 'searchScore' },
+        },
+      },
+      {
+        $setWindowFields: {
+          output: {
+            searchScoreMax: { $max: '$searchScore' },
+          },
+        },
+      },
+      {
+        $addFields: {
+          normalizedScore: {
+            $divide: ['$searchScore', '$searchScoreMax'],
+          },
+        },
+      },
+      {
+        $match: { normalizedScore: { $gte: 0.4 } },
       },
       {
         $project: {
@@ -642,15 +715,14 @@ export class SearchService {
           sanction: {
             $arrayElemAt: ['$sanction', 0],
           },
+          alias: '$alias',
           dateOfBirth: {
             $arrayElemAt: ['$dateOfBirth', 0],
           },
           nationality: {
             $arrayElemAt: ['$nationality', 0],
           },
-          initialScore: '$searchScore',
-          maxScore: '$searchMaxScore',
-          score: '$searchNormalizedScore',
+          scoreAtlas: '$normalizedScore',
         },
       },
     ];
@@ -668,46 +740,38 @@ export class SearchService {
     });
     this.logger.log('(success !) searching');
 
-    // map data
-    //---- sanctioned
-    const sanctionedClean: any[] = await sanctionedResult.map((elt) => {
-      const cleanData = this.helper.mapSanctioned(elt);
-      return cleanData;
-    });
-    //---- akaList
-    const akaClean: any[] = await akaResult.map((elt) => {
-      const cleanData = this.helper.mapAka(elt);
-      return cleanData;
-    });
-
     //merge sanctioned and aka result into one array and remove duplicate
-    this.logger.log('Merging and sorting ...');
-    const cleanData = await this.helper.cleanSearch(sanctionedClean, akaClean);
-    const downloadUrl = this.config.get('DOWNLOAD_URL');
+    const cleanedData = await this.helper.cleanSearch(
+      sanctionedResult,
+      akaResult,
+      text,
+    );
 
     //check if no results
-    if (cleanData.length <= 0) {
+    if (cleanedData.length <= 0) {
       this.logger.log('(success !) all is well');
       return {
-        resultsCount: cleanData.length,
+        resultsCount: cleanedData.length,
         resultsFile: null,
-        results: cleanData,
+        results: cleanedData,
       };
     }
+
     //generate Excel file
     this.logger.log('Generating Excel file ...');
+    const downloadUrl = this.config.get('DOWNLOAD_URL');
     const excelData = this.helper.mapExcelData(
-      cleanData,
+      cleanedData,
       text,
-      cleanData.length,
+      cleanedData.length,
     );
     const file = await this.helper.generateExcel(excelData, text);
 
     this.logger.log('(success !) all is well');
     return {
-      resultsCount: cleanData.length,
+      resultsCount: cleanedData.length,
       resultsFile: `${downloadUrl}${file}`,
-      results: cleanData,
+      results: cleanedData,
     };
   }
 }

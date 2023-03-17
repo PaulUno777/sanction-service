@@ -18,7 +18,6 @@ export class SanctionedEntity {
   type: string;
   originalName: string;
   otherNames: Array<string>;
-  sanction: Sanction;
   dateOfBirth?: DateOfBith;
   nationality?: Nationality;
 }

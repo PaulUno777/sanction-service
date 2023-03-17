@@ -10,7 +10,7 @@ async function bootstrap() {
 
   //Open API Documentation
   const config = new DocumentBuilder()
-    .setTitle('KAMIX Sanction Application')
+    .setTitle('KAMIX Sanction Service')
     .setDescription('KAMIX Sanction Rest API Docs')
     .setVersion('1.0')
     .build();

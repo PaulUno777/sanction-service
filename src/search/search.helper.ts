@@ -12,80 +12,156 @@ export class SearchHelper {
   private readonly logger = new Logger(SearchHelper.name);
   constructor(private config: ConfigService) {}
   // map sanctioned data into sanctionedDto
-  mapSanctioned(result: any): SearchOutput {
-    const entity = {
-      id: result._id.$oid,
-      firstName: result.firstName,
-      middleName: result.middleName,
-      lastName: result.lastName,
-      type: result.type,
-      originalName: result.original_name,
-      otherNames: result.otherNames,
-      sanction: {
-        id: result.sanction._id.$oid,
-        name: result.sanction.name,
-      },
-    };
+  getNames(result: any) {
+    const names = [];
+    let firstName;
+    let middleName;
+    let lastName;
+    let fullName = '';
+    const tempFullName = [];
 
-    if (result.dateOfBirth != null)
-      entity['dateOfBirth'] = result.dateOfBirth.date;
-    if (result.nationality != null) {
-      const nationality = {};
-      if (result.nationality.code)
-        nationality['code'] = result.nationality.code;
-      if (result.nationality.country)
-        nationality['country'] = result.nationality.country;
-      entity['nationality'] = nationality;
+    if (result.entity.firstName != null) {
+      firstName = result.entity.firstName.trim();
+      if (firstName.includes(' ')) {
+        names.push(firstName);
+      }
+      tempFullName.push(firstName);
+    }
+    if (result.entity.middleName != null) {
+      middleName = result.entity.middleName.trim();
+      if (middleName.includes(' ')) {
+        names.push(middleName);
+      }
+      tempFullName.push(middleName);
+    }
+    if (result.entity.lastName != null) {
+      lastName = result.entity.lastName.trim();
+      if (lastName.includes(' ')) {
+        names.push(lastName);
+      }
+      tempFullName.push(lastName);
     }
 
-    const score: number = this.setPercentage(result.score);
-
-    return { entity, score };
-  }
-
-  // map aka data into sanctionedDto
-  mapAka(result: any): SearchOutput {
-    const entity = {
-      id: result.entity._id.$oid,
-      firstName: result.entity.firstName,
-      middleName: result.entity.middleName,
-      lastName: result.entity.lastName,
-      type: result.entity.type,
-      originalName: result.entity.original_name,
-      otherNames: result.entity.otherNames,
-      sanction: {
-        id: result.sanction._id.$oid,
-        name: result.sanction.name,
-      },
-    };
-
-    if (result.dateOfBirth != null) {
-      entity['dateOfBirth'] = result.dateOfBirth.date;
-    }
-
-    if (result.nationality != null) {
-      if (result.nationality != null) {
-        const nationality = {};
-        if (result.nationality.code)
-          nationality['code'] = result.nationality.code;
-        if (result.nationality.country)
-          nationality['country'] = result.nationality.country;
-        entity['nationality'] = nationality;
+    if (tempFullName.length > 0) {
+      fullName = tempFullName.join(' ');
+      if (!names.includes(fullName)) names.push(fullName);
+      if (tempFullName.length >= 2) {
+        fullName = tempFullName.reverse().join(' ');
+        if (!names.includes(fullName)) names.push(fullName);
       }
     }
 
-    const score: number = this.setPercentage(result.score);
+    if (result.alias) {
+      for (const alias of result.alias) {
+        const tempFullAlias = [];
+        if (alias.firstName != null) {
+          firstName = alias.firstName.trim();
+          if (firstName.includes(' ')) {
+            names.push(firstName);
+          }
+          tempFullAlias.push(firstName);
+        }
+        if (alias.middleName != null) {
+          middleName = alias.middleName.trim();
+          if (middleName.includes(' ')) {
+            names.push(middleName);
+          }
+          tempFullAlias.push(middleName);
+        }
+        if (alias.lastName != null) {
+          lastName = alias.lastName.trim();
+          if (lastName.includes(' ')) {
+            names.push(lastName);
+          }
+          tempFullAlias.push(lastName);
+        }
+
+        if (tempFullAlias.length > 0) {
+          fullName = tempFullAlias.join(' ');
+          if (!names.includes(fullName)) names.push(fullName);
+          if (tempFullAlias.length >= 2) {
+            fullName = tempFullAlias.reverse().join(' ');
+            if (!names.includes(fullName)) names.push(fullName);
+          }
+        }
+      }
+    }
+
+    const finalResult = names.concat(result.entity.otherNames);
+    return finalResult;
+  }
+
+  // map aka data into sanctionedDto
+  mapSearchResult(result: any, fullName?: string): SearchOutput {
+    const entity = {
+      id: result.entity.id,
+      firstName: result.entity.firstName,
+      middleName: result.entity.middleName,
+      lastName: result.entity.lastName,
+      defaultName: result.entity.defaultName,
+      originalName: result.entity.original_name,
+      otherNames: result.entity.otherNames,
+      type: result.entity.type,
+      sanction: result.sanction,
+    };
+
+    if (result.nationality && result.dateOfBirth != null) {
+      entity['dateOfBirth'] = result.dateOfBirth.date;
+    }
+
+    if (result.nationality && result.nationality != null) {
+      entity['nationality'] = result.nationality;
+    }
+    const names = this.getNames(result);
+    const score: number = this.setPercentage(names, fullName);
 
     return { entity, score };
   }
 
   // merge akalist and sanctioned  and remove duplicate data
-  async cleanSearch(array1: any[], array2: any[]): Promise<any[]> {
-    this.logger.log('Cleanning search and sort by score ...');
-    const cleanData: any[] = array1.concat(array2);
+  async cleanSearch(
+    sanctioned: any[],
+    aka: any[],
+    fullName?: string,
+  ): Promise<any[]> {
+    //Merge aka and sanctioned results
+    const mergedData: any[] = sanctioned.concat(aka);
+    console.log({ sanctionedcount: sanctioned.length });
+    console.log({ akaCount: aka.length });
+    //remove duplicate
+    const indexes = [];
+    const cleanData = [];
+    mergedData.forEach((item) => {
+      if (!indexes.includes(item.entity.id)) {
+        indexes.push(item.entity.id);
+        const cleanItem = this.mapSearchResult(item, fullName);
+        cleanData.push(cleanItem);
+      }
+    });
 
-    cleanData.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
-    const filtered = this.removeDuplicate(cleanData);
+    const publicDir = this.config.get('FILE_LOCATION');
+
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir);
+    }
+    console.log({ cleanedCount: cleanData.length });
+    await cleanData.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
+    return cleanData;
+  }
+
+  mergeSearch(data: any[]): any[] {
+    this.logger.log('Cleanning search result from AkaList and Sanctioned ...');
+    const indexes = [];
+    const filtered = [];
+
+    if (data.length > 1) {
+      data.forEach(function (item) {
+        if (!indexes.includes(item.entity.id)) {
+          indexes.push(item.entity.id);
+          filtered.push(item);
+        }
+      });
+    }
     return filtered;
   }
 
@@ -107,15 +183,16 @@ export class SearchHelper {
   }
 
   //Apply nationality and date of birth filters to retrieved data
-  async filterCompleteSearch(response: any[], body: SearchParamDto) {
+  filterCompleteSearch(response: any[], body: SearchParamDto) {
     let filteredData = response;
 
     //check if sanctionId is provided in request parameters
-    if (typeof body.sanctionId == 'string') {
+    if (Array.isArray(body.sanction)) {
       this.logger.log('====== Filtering by sanction...');
       filteredData = filteredData.filter((value) => {
-        return (value.entity.sanction.id = body.sanctionId);
+        return body.sanction.includes(value.entity.sanction.id);
       });
+      console.log({ filteredCount: filteredData.length });
     }
 
     if (body.dob) {
@@ -132,35 +209,30 @@ export class SearchHelper {
         }
       });
       filteredData = tempData;
-      this.logger.log('success !');
+      console.log({ filteredCount: filteredData.length });
     }
 
-    if (
-      body.nationality &&
-      body.nationality.length > 0 &&
-      body.nationality != null
-    ) {
+    if (body.nationality) {
       this.logger.log('====== Filtering by natinality...');
-      const tempArray = filteredData.filter((value: any) => {
+      filteredData = filteredData.filter((value: any) => {
         let test = false;
         if (value.entity.nationality) {
-          if (value.entity.nationality.code) {
+          if (value.entity.nationality.code != null) {
+            console.log(value.entity.nationality.code);
             test = body.nationality.includes(value.entity.nationality.code);
-            this.logger.log('success ! --- Finded in coutry ');
+            console.log(test);
           } else {
-            const nationalities: any = this.getBodyNationalityNames(
-              body.nationality,
-            );
+            const nationalities = this.getNationalityNames(body.nationality);
             test = this.checkNationality(
               value.entity.nationality.country,
               nationalities,
             );
+            console.log(test);
           }
         }
         return test;
       });
-
-      filteredData = tempArray;
+      console.log({ filteredCount: filteredData.length });
     }
 
     return filteredData;
@@ -302,7 +374,7 @@ export class SearchHelper {
     return fileName;
   }
 
-  //clean data
+  //clean data for excel
   mapExcelData(array: any[], searchInput: string, resultCount: number): any[] {
     this.logger.log('----- Mapping data for Excel');
     const cleanData = [];
@@ -355,13 +427,14 @@ export class SearchHelper {
           }
         }
 
+        const DETAIL_URL = this.config.get('DETAIL_URL');
         cleanData.push({
           style: 3,
           result: `${index}. (${elt.score}%) - ${name}`,
           sanction: elt.entity.sanction.name,
           dob: dobString.trim(),
           nationality: nationality,
-          link: `todoByFrontDev/${elt.entity.id}`,
+          link: `${DETAIL_URL}${elt.entity.id}/information`,
         });
       });
     } else {
@@ -376,7 +449,7 @@ export class SearchHelper {
     return cleanData;
   }
 
-  getBodyNationalityNames(codes: string[]) {
+  getNationalityNames(codes: string[]) {
     let result = [];
     codes.map(async (elt) => {
       const countryCode = elt.toUpperCase();
@@ -384,14 +457,15 @@ export class SearchHelper {
       const nameEn = i18nIsoCountries.getName(countryCode, 'en');
 
       let arrayFr = [];
-      if (nameFr) arrayFr = this.transfarmName(nameFr);
+      if (nameFr) arrayFr = this.transformName(nameFr);
       let arrayEn;
-      if (nameEn) arrayEn = this.transfarmName(nameEn);
+      if (nameEn) arrayEn = this.transformName(nameEn);
 
       const tempArray = arrayFr.concat(arrayEn);
       result = result.concat(tempArray);
     });
-    console.log({ code: result });
+    result = result.filter((value) => typeof value != 'undefined');
+    console.log({ nationalityFromCode: result });
     return result;
   }
 
@@ -399,7 +473,7 @@ export class SearchHelper {
     return text.normalize('NFD').replace(/\p{Diacritic}/gu, '');
   }
 
-  transfarmName(name: string): string[] {
+  transformName(name: string): string[] {
     const cleanedName = this.toCapitalizeWord(this.removeAccents(name.trim()));
     let tempArray = [];
     if (cleanedName.trim().includes(' ')) {
@@ -428,14 +502,16 @@ export class SearchHelper {
     santionedNationality: string,
     codeNationality: string[],
   ): boolean {
-    const nationalities = this.transfarmName(santionedNationality);
-    console.log({ sanctioned: nationalities });
+    const nationalities = this.transformName(santionedNationality);
+    console.log({ sanctionedNationalityDecomposed: nationalities });
     let test = false;
     nationalities.forEach((name) => {
       for (const country of codeNationality) {
-        const score = StringSimilarity.compareTwoStrings(name, country);
+        const score = StringSimilarity.compareTwoStrings(
+          name.toLowerCase(),
+          country.toLowerCase(),
+        );
         if (score > 0.8) {
-          this.logger.log('success ! --- Finded in coutry name');
           test = true;
           break;
         }
@@ -456,8 +532,18 @@ export class SearchHelper {
   }
 
   //transform score into percentage
-  setPercentage(score: number): number {
-    const data = score * 100;
+  setPercentage(allNames: string[], fullName: string): number {
+    let maxScore = 0;
+    for (const name of allNames) {
+      const score = StringSimilarity.compareTwoStrings(
+        this.toCapitalizeWord(name),
+        this.toCapitalizeWord(fullName),
+      );
+      if (score > maxScore) {
+        maxScore = score;
+      }
+    }
+    const data = maxScore * 100;
     return Number(data.toFixed(2));
   }
 }

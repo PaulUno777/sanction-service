@@ -10,13 +10,15 @@ import {
   StreamableFile,
   Response,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiExcludeEndpoint, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiExcludeEndpoint, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { createReadStream } from 'fs';
 import { SearchParamDto } from './dto/search.param.dto';
 import { SearchService } from './search.service';
 import { join } from 'path';
+import { NotFoundException } from '@nestjs/common/exceptions';
 
 @Controller('search')
 @ApiTags('search')
@@ -36,6 +38,7 @@ export class SearchController {
   search(@Query() query: Record<string, any>) {
     return this.searchService.searchSimple(String(query.text));
   }
+
   @Get('filter')
   getFilter() {
     return [
@@ -71,14 +74,38 @@ export class SearchController {
         name: 'matchRate',
         paramType: 'body',
         type: 'number',
-        valueSet: [50, 60, 70, 80],
-        exemple: 50,
+        valueSet: [40, 50, 60, 70, 80],
+        exemple: 40,
       },
     ];
   }
 
   @Post()
   searchfiltered(@Body() body: SearchParamDto) {
+    //Check all body parameters
+    const regex = /[0-9]{4}/g;
+    if (body.fullName.length <= 3 || regex.test(body.fullName))
+      throw new BadRequestException(
+        'Invalid parameter(!) You must provide real fullname to search',
+      );
+
+    if (body.dob) {
+      if (
+        (body.dob.length != 4 && body.dob.length != 7) ||
+        !regex.test(body.dob)
+      )
+        throw new BadRequestException(
+          'Invalid parameter ! dob must be a YYYY-MM or YYYY',
+        );
+    }
+
+    if (body.sanction) {
+      if (body.sanction.length <= 0 || Array.isArray(body.sanction) == false)
+        throw new BadRequestException(
+          'Invalid parameter ! sanction be unempty list of sanction ids',
+        );
+    }
+
     return this.searchService.searchfiltered(body);
   }
 
@@ -96,7 +123,8 @@ export class SearchController {
     });
     const dir = this.config.get('FILE_LOCATION');
     const file: any = createReadStream(join(process.cwd(), dir + fileName));
+    if (!file)
+      throw new NotFoundException('the file for this search does not exist');
     return new StreamableFile(file);
-    //file.pipe(response);
   }
 }

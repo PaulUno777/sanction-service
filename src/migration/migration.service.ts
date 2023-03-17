@@ -18,13 +18,13 @@ export class MigrationService {
   //=========Main method for all Migrations================
   async migrateAllToMongo() {
     const result = await Promise.all([
-      await this.migrateSantionToMongo(),
+      // await this.migrateSantionToMongo(),
       await this.migrateSantionedToMongo(),
-      this.migrateNationalityListToMongo(),
-      this.migrateCitizenshipListToMongo(),
-      this.migrateDateOfBirthListToMongo(),
-      this.migratePlaceOfBirthListToMongo(),
-      this.migrateAkaListToMongo(),
+      // this.migrateNationalityListToMongo(),
+      // this.migrateCitizenshipListToMongo(),
+      // this.migrateDateOfBirthListToMongo(),
+      // this.migratePlaceOfBirthListToMongo(),
+      // this.migrateAkaListToMongo(),
     ]);
 
     this.logger.log('All is well !');
@@ -157,29 +157,37 @@ export class MigrationService {
     connection.close();
 
     //cleanup data
-    const cleanData = table.map((elt) => {
+    const cleanData: any = table.map((elt) => {
       const otherNames = [];
-      if (elt.name1 != null) otherNames.push(this.toCapitalizeWord(elt.name1));
-      if (elt.name3 != null) otherNames.push(this.toCapitalizeWord(elt.name3));
-      if (elt.name2 != null) otherNames.push(this.toCapitalizeWord(elt.name2));
-      if (elt.name4 != null) otherNames.push(this.toCapitalizeWord(elt.name4));
-      if (elt.name5 != null) otherNames.push(this.toCapitalizeWord(elt.name5));
-      if (elt.name6 != null) otherNames.push(this.toCapitalizeWord(elt.name6));
-      let firstName = null;
-      let middleName = null;
-      let lastName = null;
+      if (elt.name1 != null) otherNames.push(elt.name1);
+      if (elt.name3 != null) otherNames.push(elt.name3);
+      if (elt.name2 != null) otherNames.push(elt.name2);
+      if (elt.name4 != null) otherNames.push(elt.name4);
+      if (elt.name5 != null) otherNames.push(elt.name5);
+      if (elt.name6 != null) otherNames.push(elt.name6);
+      let defaultName = '';
+
       if (elt.firstname != null)
-        firstName = this.toCapitalizeWord(elt.firstname);
+        defaultName = defaultName + ' ' + elt.firstname;
       if (elt.middlename != null)
-        middleName = this.toCapitalizeWord(elt.middlename);
-      if (elt.lastname != null) lastName = this.toCapitalizeWord(elt.lastname);
+        defaultName = defaultName + ' ' + elt.middlename;
+      if (elt.lastname != null) defaultName = defaultName + ' ' + elt.lastname;
+
+      if (elt.original_name != null) {
+        defaultName = defaultName + ' ' + elt.original_name;
+      } else {
+        for (const name of otherNames) {
+          defaultName = defaultName + ' ' + name;
+        }
+      }
 
       return {
         id: this.transformId(elt.id),
         listId: this.transformId(elt.list_id),
-        firstName: firstName,
-        middleName: middleName,
-        lastName: lastName,
+        firstName: elt.firstname,
+        middleName: elt.middlename,
+        lastName: elt.lastname,
+        defaultName: defaultName.trim(),
         title: elt.title,
         type: elt.type,
         remark: elt.remark,

@@ -19,6 +19,7 @@ model Sanctioned {
   firstName    String?
   middleName   String?
   lastName     String?
+  defaultName  String?
   title        String?
   type         String?
   remark       String?

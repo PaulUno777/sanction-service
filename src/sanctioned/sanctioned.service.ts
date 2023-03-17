@@ -33,7 +33,7 @@ export class SanctionedService {
     //Elements per page
     const PER_PAGE = limit || 20;
     const count: number = (await this.prisma.sanctioned.count()) | 0;
-    const order = orderBy ?? 'updatedAt';
+    const order = orderBy || 'updatedAt';
 
     const currentPage: number = Math.max(Number(page) || 1, 1);
     const pageNumber: number = currentPage - 1;
@@ -45,8 +45,8 @@ export class SanctionedService {
     if (currentPage != lastPage) next = currentPage + 1;
 
     let ordener;
-    if (order == 'firstName') ordener = { firstName: 'asc' };
-    if (order == 'lastName') ordener = { lastName: 'asc' };
+    if (order == 'firstName') ordener = { defaultName: 'asc' };
+    if (order == 'lastName') ordener = { defaultName: 'asc' };
     if (order == 'updatedAt') ordener = { updatedAt: 'desc' };
 
     //get elements with their corresponding sanction
@@ -87,6 +87,7 @@ export class SanctionedService {
         otherNames: elt.otherNames,
         entityType: elt.type,
         sanctionId: elt.listId,
+        defaultName: elt['defaultName'],
         sanctioName: elt['Sanction'].name,
       };
     });
