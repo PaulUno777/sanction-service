@@ -33,7 +33,7 @@ echo PORT=${PORT} >> .env;
 echo TIME_ZONE=${TIME_ZONE} >> .env;
 echo FILE_LOCATION=${FILE_LOCATION} >> .env;
 echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;
-echo DETAIL_URL=${DETAIL_URL} >> .env;
+echo DETAIL_URL=${DETAIL_URL} >> .env;'''
         sh 'cat .env'
       }
     }
