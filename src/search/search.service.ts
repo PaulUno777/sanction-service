@@ -458,8 +458,11 @@ export class SearchService {
 
   async searchSimple(text: string): Promise<any> {
     this.logger.log('simple searching ...');
-    if (typeof text != 'string' || text.length <= 3)
-      throw new BadRequestException('You must provide real fullname to search');
+    const regex = /[0-9]{4}/g;
+    if (typeof text != 'string' || text.length <= 3 || regex.test(text))
+      throw new BadRequestException(
+        'Invalid parameter(!) You must provide real fullname to search',
+      );
 
     //Request query to mongoDB
     //----sanctioned
@@ -579,6 +582,7 @@ export class SearchService {
             firstName: '$firstName',
             middleName: '$middleName',
             lastName: '$lastName',
+            defaultName: '$defaultName',
             original_name: '$original_name',
             otherNames: '$otherNames',
             type: '$type',
@@ -598,49 +602,98 @@ export class SearchService {
       },
     ];
 
-    //----aka
+    //$ $ $ $ $ AKA $ $ $ $
     const akaPipeline: any = [
+      //search
       {
-        //search
         $search: {
-          index: 'sanctionned_index',
+          index: 'sanctioned_aka_index',
           text: {
             query: text,
-            path: [
-              'firstName',
-              'lastName',
-              'middleName',
-              'originalName',
-              'otherNames',
-            ],
+            path: ['firstName', 'lastName', 'middleName'],
             fuzzy: {
               maxEdits: 2,
             },
           },
         },
       },
+      //sanctioned
+      {
+        $lookup: {
+          from: 'Sanctioned',
+          let: {
+            id: '$sanctionedId',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$_id', '$$id'],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                id: { $toString: '$_id' },
+                listId: { $toString: '$listId' },
+                firstName: 1,
+                middleName: 1,
+                lastName: 1,
+                defaultName: 1,
+                original_name: 1,
+                otherNames: 1,
+                type: 1,
+              },
+            },
+          ],
+          as: 'sanctioned',
+        },
+      },
+      //sanctioned as objet
+      {
+        $addFields: {
+          sanctionedObject: { $arrayElemAt: ['$sanctioned', 0] },
+        },
+      },
       //sanction
       {
         $lookup: {
           from: 'SanctionList',
-          localField: 'listId',
-          foreignField: '_id',
+          let: {
+            id: { $toObjectId: '$sanctionedObject.listId' },
+          },
+          as: 'sanction',
           pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$_id', '$$id'],
+                },
+              },
+            },
             { $project: { _id: 0, id: { $toString: '$_id' }, name: 1 } },
           ],
-          as: 'sanction',
         },
       },
       //alias
       {
         $lookup: {
           from: 'AkaList',
-          localField: '_id',
-          foreignField: 'sanctionedID',
+          let: {
+            id: { $toObjectId: '$sanctionedObject.id' },
+          },
+          as: 'alias',
           pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$sanctionedId', '$$id'],
+                },
+              },
+            },
             { $project: { _id: 0, firstName: 1, middleName: 1, lastName: 1 } },
           ],
-          as: 'alias',
         },
       },
       //dateOfBirth
@@ -648,7 +701,7 @@ export class SearchService {
         $lookup: {
           from: 'DateOfBirthList',
           let: {
-            id: '$_id',
+            id: '$sanctionedId',
           },
           pipeline: [
             {
@@ -658,7 +711,12 @@ export class SearchService {
                 },
               },
             },
-            { $project: { _id: 0, date: 1 } },
+            {
+              $project: {
+                _id: 0,
+                date: 1,
+              },
+            },
           ],
           as: 'dateOfBirth',
         },
@@ -668,7 +726,7 @@ export class SearchService {
         $lookup: {
           from: 'NationalityList',
           let: {
-            id: '$_id',
+            id: '$sanctionedId',
           },
           pipeline: [
             {
@@ -678,7 +736,13 @@ export class SearchService {
                 },
               },
             },
-            { $project: { _id: 0, country: 1, code: 1 } },
+            {
+              $project: {
+                _id: 0,
+                country: 1,
+                code: 1,
+              },
+            },
           ],
           as: 'nationality',
         },

@@ -18,13 +18,13 @@ export class MigrationService {
   //=========Main method for all Migrations================
   async migrateAllToMongo() {
     const result = await Promise.all([
-      // await this.migrateSantionToMongo(),
+      await this.migrateSantionToMongo(),
       await this.migrateSantionedToMongo(),
-      // this.migrateNationalityListToMongo(),
-      // this.migrateCitizenshipListToMongo(),
-      // this.migrateDateOfBirthListToMongo(),
-      // this.migratePlaceOfBirthListToMongo(),
-      // this.migrateAkaListToMongo(),
+      this.migrateNationalityListToMongo(),
+      this.migrateCitizenshipListToMongo(),
+      this.migrateDateOfBirthListToMongo(),
+      this.migratePlaceOfBirthListToMongo(),
+      this.migrateAkaListToMongo(),
     ]);
 
     this.logger.log('All is well !');

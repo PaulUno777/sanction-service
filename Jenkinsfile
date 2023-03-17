@@ -23,6 +23,7 @@ ls -la'''
         TIME_ZONE = '1'
         FILE_LOCATION = '\'./public/\''
         DOWNLOAD_URL = 'http://sandbox.kamix.io:3000/api/search/download/'
+        DETAIL_URL='http://sandbox.kamix.io:5000/sanction/'
       }
       steps {
         sh '''echo DATABASE_URL=${DATABASE_URL} >> .env;
@@ -32,7 +33,7 @@ echo PORT=${PORT} >> .env;
 echo TIME_ZONE=${TIME_ZONE} >> .env;
 echo FILE_LOCATION=${FILE_LOCATION} >> .env;
 echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;
-echo DETAIL_URL=\'http://sandbox.kamix.io:5000/sanction/\''''
+echo DETAIL_URL=${DETAIL_URL} >> .env;
         sh 'cat .env'
       }
     }

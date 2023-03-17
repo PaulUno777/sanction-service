@@ -41,8 +41,8 @@ export class SearchHelper {
       }
       tempFullName.push(lastName);
     }
-
-    names.push(result.entity.defaultName);
+    if (typeof result.entity.defaultName != 'undefined')
+      names.push(result.entity.defaultName);
 
     if (tempFullName.length > 0) {
       fullName = tempFullName.join(' ');
@@ -92,7 +92,7 @@ export class SearchHelper {
   }
 
   // map aka data into sanctionedDto
-  mapSearchResult(result: any, fullName?: string): SearchOutput {
+  mapSearchResult(result: any, fullName: string): SearchOutput {
     const entity = {
       id: result.entity.id,
       firstName: result.entity.firstName,
@@ -113,17 +113,14 @@ export class SearchHelper {
       entity['nationality'] = result.nationality;
     }
     const names = this.getNames(result);
+    console.log({ result: result, names: names });
     const score: number = this.setPercentage(names, fullName);
 
     return { entity, score };
   }
 
   // merge akalist and sanctioned  and remove duplicate data
-  async cleanSearch(
-    sanctioned: any[],
-    aka: any[],
-    fullName?: string,
-  ): Promise<any[]> {
+  cleanSearch(sanctioned: any[], aka: any[], fullName?: string): any[] {
     //Merge aka and sanctioned results
     const mergedData: any[] = sanctioned.concat(aka);
     console.log({ sanctionedcount: sanctioned.length });
@@ -145,29 +142,12 @@ export class SearchHelper {
       fs.mkdirSync(publicDir);
     }
     console.log({ cleanedCount: cleanData.length });
-    await cleanData.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
+    cleanData.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
     return cleanData;
   }
 
   mergeSearch(data: any[]): any[] {
     this.logger.log('Cleanning search result from AkaList and Sanctioned ...');
-    const indexes = [];
-    const filtered = [];
-
-    if (data.length > 1) {
-      data.forEach(function (item) {
-        if (!indexes.includes(item.entity.id)) {
-          indexes.push(item.entity.id);
-          filtered.push(item);
-        }
-      });
-    }
-    return filtered;
-  }
-
-  // remove duplicate data
-  removeDuplicate(data: any[]): any[] {
-    this.logger.log('Removing duplicate from AkaList and Sanctioned ...');
     const indexes = [];
     const filtered = [];
 
@@ -432,7 +412,7 @@ export class SearchHelper {
           style: 3,
           result: `${index}. (${elt.score}%) - ${name}`,
           sanction: elt.entity.sanction.name,
-          dob: dobString.trim(),
+          dob: dobString,
           nationality: nationality,
           link: `${DETAIL_URL}${elt.entity.id}/information`,
         });
@@ -522,13 +502,15 @@ export class SearchHelper {
 
   toCapitalizeWord(str: string): string {
     const reg = /[- ]/;
-    const splitStr = str.toLowerCase().split(reg);
-    for (let i = 0; i < splitStr.length; i++) {
-      splitStr[i] =
-        splitStr[i].charAt(0).toUpperCase() + splitStr[i].substring(1);
-    }
-    // Directly return the joined string
-    return splitStr.join(' ');
+    try {
+      const splitStr = str.toLowerCase().split(reg);
+      for (let i = 0; i < splitStr.length; i++) {
+        splitStr[i] =
+          splitStr[i].charAt(0).toUpperCase() + splitStr[i].substring(1);
+      }
+      // Directly return the joined string
+      return splitStr.join(' ');
+    } catch (error) {}
   }
 
   //transform score into percentage
@@ -536,8 +518,8 @@ export class SearchHelper {
     let maxScore = 0;
     for (const name of allNames) {
       const score = StringSimilarity.compareTwoStrings(
-        this.toCapitalizeWord(name),
-        this.toCapitalizeWord(fullName),
+        name.toUpperCase(),
+        fullName.toUpperCase(),
       );
       if (score > maxScore) {
         maxScore = score;
