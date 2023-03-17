@@ -31,7 +31,8 @@ echo PER_PAGE=${PER_PAGE} >> .env;
 echo PORT=${PORT} >> .env;
 echo TIME_ZONE=${TIME_ZONE} >> .env;
 echo FILE_LOCATION=${FILE_LOCATION} >> .env;
-echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;'''
+echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;
+echo DETAIL_URL=\'http://sandbox.kamix.io:5000/sanction/\''''
         sh 'cat .env'
       }
     }
