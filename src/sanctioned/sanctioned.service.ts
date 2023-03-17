@@ -29,6 +29,13 @@ export class SanctionedService {
       if (typeof page != 'number')
         throw new BadRequestException('page length must a number');
     }
+    if (orderBy) {
+      const orders = ['firstName', 'lastName', 'updatedAt'];
+      if (!orders.includes(orderBy))
+        throw new BadRequestException(
+          'possibles values of orderBy are firstName lastName updatedAt',
+        );
+    }
 
     //Elements per page
     const PER_PAGE = limit || 20;
@@ -77,8 +84,6 @@ export class SanctionedService {
 
     const sanctioned = await this.prisma.sanctioned.findMany(queryOptions);
     console.log(queryOptions);
-    console.log({ result: sanctioned.length });
-
     const cleanData = sanctioned.map((elt) => {
       return {
         id: elt.id,
