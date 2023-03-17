@@ -113,7 +113,6 @@ export class SearchHelper {
       entity['nationality'] = result.nationality;
     }
     const names = this.getNames(result);
-    console.log({ result: result, names: names });
     const score: number = this.setPercentage(names, fullName);
 
     return { entity, score };

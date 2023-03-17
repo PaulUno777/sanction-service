@@ -76,6 +76,8 @@ export class SanctionedService {
     }
 
     const sanctioned = await this.prisma.sanctioned.findMany(queryOptions);
+    console.log(queryOptions);
+    console.log({ result: sanctioned.length });
 
     const cleanData = sanctioned.map((elt) => {
       return {
@@ -88,6 +90,7 @@ export class SanctionedService {
         entityType: elt.type,
         sanctionId: elt.listId,
         defaultName: elt['defaultName'],
+        alias: elt['akas'],
         sanctioName: elt['Sanction'].name,
       };
     });
