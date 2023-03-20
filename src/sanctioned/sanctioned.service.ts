@@ -40,7 +40,7 @@ export class SanctionedService {
     //Elements per page
     const PER_PAGE = limit || 20;
     const count: number = (await this.prisma.sanctioned.count()) | 0;
-    const order = orderBy || 'asc';
+    const order = orderBy;
 
     const currentPage: number = Math.max(Number(page) || 1, 1);
     const pageNumber: number = currentPage - 1;
@@ -86,8 +86,6 @@ export class SanctionedService {
         take: PER_PAGE,
       };
     }
-    console.log(queryOptions);
-
     const sanctioned = await this.prisma.sanctioned.findMany(queryOptions);
     console.log(queryOptions);
     const cleanData = sanctioned.map((elt) => {
