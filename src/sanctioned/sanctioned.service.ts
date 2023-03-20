@@ -27,10 +27,10 @@ export class SanctionedService {
     }
     if (page) {
       if (typeof page != 'number')
-        throw new BadRequestException('page length must a number');
+        throw new BadRequestException('page length must be a number');
     }
     if (orderBy) {
-      const orders = ['firstName', 'lastName', 'updatedAt'];
+      const orders = ['asc', 'desc', 'ASC', 'DESC'];
       if (!orders.includes(orderBy))
         throw new BadRequestException(
           'possibles values of orderBy are firstName lastName updatedAt',
@@ -40,7 +40,7 @@ export class SanctionedService {
     //Elements per page
     const PER_PAGE = limit || 20;
     const count: number = (await this.prisma.sanctioned.count()) | 0;
-    const order = orderBy || 'updatedAt';
+    const order = orderBy || 'asc';
 
     const currentPage: number = Math.max(Number(page) || 1, 1);
     const pageNumber: number = currentPage - 1;
@@ -51,10 +51,15 @@ export class SanctionedService {
     if (currentPage != 1) prev = currentPage - 1;
     if (currentPage != lastPage) next = currentPage + 1;
 
+    //set order
     let ordener;
-    if (order == 'firstName') ordener = { defaultName: 'asc' };
-    if (order == 'lastName') ordener = { defaultName: 'asc' };
-    if (order == 'updatedAt') ordener = { updatedAt: 'desc' };
+    if (order) {
+      const cleanOrder = order.toLowerCase();
+      if (cleanOrder == 'asc') ordener = { defaultName: 'asc' };
+      if (cleanOrder == 'desc') ordener = { defaultName: 'desc' };
+    } else {
+      ordener = { updatedAt: 'desc' };
+    }
 
     //get elements with their corresponding sanction
 
@@ -81,6 +86,7 @@ export class SanctionedService {
         take: PER_PAGE,
       };
     }
+    console.log(queryOptions);
 
     const sanctioned = await this.prisma.sanctioned.findMany(queryOptions);
     console.log(queryOptions);

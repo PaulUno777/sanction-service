@@ -1,1 +1,1 @@
-export type OrderByType = 'firstName' | 'lastName' | 'updatedAt';
+export type OrderByType = 'asc' | 'desc';

@@ -21,8 +21,7 @@ export class SanctionedController {
   })
   @ApiQuery({
     name: 'orderBy',
-    description:
-      "order criteria, possibles values are 'firstName' or 'lastName' or 'updatedAt'",
+    description: "order criteria, possibles values are 'asc' or 'desc'",
     required: false,
     type: String,
   })
