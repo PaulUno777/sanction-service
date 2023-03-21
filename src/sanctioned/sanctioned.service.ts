@@ -68,6 +68,7 @@ export class SanctionedService {
       queryOptions = {
         where: {
           listId: sanctionId,
+          NOT: { defaultName: '' },
         },
         orderBy: ordener,
         include: {
@@ -78,6 +79,9 @@ export class SanctionedService {
       };
     } else {
       queryOptions = {
+        where: {
+          NOT: { defaultName: '' },
+        },
         orderBy: ordener,
         include: {
           Sanction: true,
