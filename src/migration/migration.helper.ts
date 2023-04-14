@@ -44,7 +44,6 @@ export class MigrationHelper {
         }),
       ),
     );
-    console.log(response);
     const xmlData = response.data;
     const jsonData = await parseStringPromise(xmlData);
     const jsonFilePath = `${SOURCE_DIR}${fileName}.json`;
