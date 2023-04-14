@@ -36,7 +36,7 @@ export class SearchController {
   })
   @Get()
   search(@Query() query: Record<string, any>) {
-    return this.searchService.searchSimple(String(query.text));
+    //return this.searchService.searchSimple(String(query.text));
   }
 
   @Get('filter')
@@ -106,7 +106,7 @@ export class SearchController {
         );
     }
 
-    return this.searchService.searchfiltered(body);
+    //return this.searchService.searchfiltered(body);
   }
 
   @ApiExcludeEndpoint()

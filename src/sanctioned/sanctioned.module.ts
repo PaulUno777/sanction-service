@@ -4,6 +4,6 @@ import { SanctionedController } from './sanctioned.controller';
 
 @Module({
   controllers: [SanctionedController],
-  providers: [SanctionedService]
+  providers: [SanctionedService],
 })
 export class SanctionedModule {}

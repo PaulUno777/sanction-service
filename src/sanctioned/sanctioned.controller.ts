@@ -33,16 +33,16 @@ export class SanctionedController {
   })
   @Get()
   findAll(@Query() query: Record<string, any>) {
-    return this.sanctionedService.findAll(
-      Number(query.page),
-      Number(query.limit),
-      query.orderBy,
-      query.sactionId,
-    );
+    // return this.sanctionedService.findAll(
+    //   Number(query.page),
+    //   Number(query.limit),
+    //   query.orderBy,
+    //   query.sactionId,
+    // );
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.sanctionedService.findOne(id);
+    //return this.sanctionedService.findOne(id);
   }
 }

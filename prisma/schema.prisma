@@ -16,69 +16,64 @@ model Sanctioned {
   Sanction SanctionList @relation(fields: [listId], references: [id])
   listId   String       @db.ObjectId
 
-  firstName    String?
-  middleName   String?
-  lastName     String?
-  defaultName  String?
-  title        String?
-  type         String?
-  remark       String?
-  gender       Gender?
-  designation  String?
-  motive       String?
-  reference    String?
-  referenceUe  String?  @map("reference_ue")
-  referenceOnu String?  @map("reference_onu")
-  unListType   String?  @map("un_list_type")
-  listedOn     String?  @map("listed_on")
-  listType     String?  @map("list_type")
-  submittedBy  String?  @map("submitted_by")
-  originalName String?  @map("original_name")
-  otherNames   String[] @default([])
+  firstName      String?
+  middleName     String?
+  lastName       String?
+  defaultName    String?
+  gender         Gender?
+  type           SubjectType?
+  dateOfBirth    DateOfBith?
+  placeOfBirth   PlaceOfBirth?
+  title          String?
+  remark         String?
+  motive         String?
+  references     String[]      @default([])
+  publicationUrl String?
+  listedOn       String?
+  listType       String?
+  akas           Aka[]
 
-  akas          AkaList[]
-  nationalities NationalityList[]
-  citizenships  CitizenshipList[]
-  placesOfbirth PlaceOfBirthList[]
-  datesOfBirth  DateOfBirthList[]
+  adresses      Adresse[]
+  nationalities Nationality[]
+  citizenships  Citizenship[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }
 
-model PlaceOfBirthList {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+// model PlaceOfBirthList {
+//   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-  sanctionedId String     @db.ObjectId
+//   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
+//   sanctionedId String     @db.ObjectId
 
-  place           String?
-  city            String?
-  stateOrProvince String?
-  postalCode      String?
-  zipCode         String?
-  country         String?
-  mainEntry       Int     @default(1)
+//   place           String?
+//   city            String?
+//   stateOrProvince String?
+//   postalCode      String?
+//   zipCode         String?
+//   country         String?
+//   mainEntry       Int     @default(1)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-}
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+// }
 
-model DateOfBirthList {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+// model DateOfBirthList {
+//   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-  sanctionedId String     @db.ObjectId
+//   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
+//   sanctionedId String     @db.ObjectId
 
-  date      DateOfBith
-  mainEntry Int        @default(1)
-  comment   String?
+//   date      DateOfBith
+//   mainEntry Int        @default(1)
+//   comment   String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-}
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+// }
 
-model NationalityList {
+model Nationality {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
@@ -92,7 +87,7 @@ model NationalityList {
   updatedAt DateTime @default(now()) @updatedAt
 }
 
-model CitizenshipList {
+model Citizenship {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
@@ -106,22 +101,20 @@ model CitizenshipList {
   updatedAt DateTime @default(now()) @updatedAt
 }
 
-model AkaList {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+// model AkaList {
+//   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-  sanctionedId String     @db.ObjectId
+//   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
+//   sanctionedId String     @db.ObjectId
 
-  category   String?
-  type       String?
-  firstName  String?
-  middleName String?
-  lastName   String?
-  comment    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-}
+//   category    String?
+//   type        String?
+//   firstName   String?
+//   middleName  String?
+//   lastName    String?
+//   defaultName String?
+//   comment     String?
+// }
 
 model SanctionList {
   id String @id @default(auto()) @map("_id") @db.ObjectId
@@ -142,8 +135,48 @@ enum Gender {
   F
 }
 
+type Country {
+  isoCode String?
+  name String?
+}
+
 type DateOfBith {
   day   String?
   month String?
   year  String?
+}
+
+type PlaceOfBirth {
+  place           String?
+  stateOrProvince String?
+  postalCode      String?
+  zipCode         String?
+  country         Country?
+}
+
+model Adresse {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
+  sanctionedId String     @db.ObjectId
+
+  place           String?
+  stateOrProvince String?
+  postalCode      String?
+  zipCode         String?
+  country         Country?
+}
+
+type SubjectType {
+  code  String?
+  label String?
+}
+
+type Aka {
+  type        String?
+  firstName   String?
+  middleName  String?
+  lastName    String?
+  defaultName String?
+  comment     String?
 }
