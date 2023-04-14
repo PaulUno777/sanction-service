@@ -147,7 +147,7 @@ export class MigrationHelper {
     //get DGT file source
     const url = this.config.get('DGT_SOURCE');
     //request
-    await this.saveJsonFromXml(url, 'liste_DGT');
+    await this.saveJsonFromJson(url, 'liste_DGT');
 
     // const datePublication = data.Publications.DatePublication;
     // const cleanData = data.Publications.PublicationDetail.map((elt) => {
