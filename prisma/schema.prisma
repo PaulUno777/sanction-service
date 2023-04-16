@@ -10,134 +10,72 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model SanctionList {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name            String
+  publicationDate DateTime? @db.Date
+  sourceUrl       String?
+  importRate      String?   @default("Weekly")
+
+  lastImported      DateTime @default(now())
+  sourceLastUpdated DateTime @default(now())
+
+  santioned Sanctioned[]
+}
+
 model Sanctioned {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
   Sanction SanctionList @relation(fields: [listId], references: [id])
   listId   String       @db.ObjectId
 
-  firstName      String?
-  middleName     String?
-  lastName       String?
   defaultName    String?
   gender         Gender?
-  type           SubjectType?
+  type           String?
+  akas           String[]      @default([])
   dateOfBirth    DateOfBith?
   placeOfBirth   PlaceOfBirth?
   title          String?
-  remark         String?
-  motive         String?
+  remarks         String?
+  programs       String[]      @default([])
   references     String[]      @default([])
   publicationUrl String?
-  listedOn       String?
-  listType       String?
-  akas           Aka[]
-
-  adresses      Adresse[]
+  
+  addresses     Addresse[]
   nationalities Nationality[]
   citizenships  Citizenship[]
+  othersInfos   Info[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }
 
-// model PlaceOfBirthList {
-//   id String @id @default(auto()) @map("_id") @db.ObjectId
-
-//   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-//   sanctionedId String     @db.ObjectId
-
-//   place           String?
-//   city            String?
-//   stateOrProvince String?
-//   postalCode      String?
-//   zipCode         String?
-//   country         String?
-//   mainEntry       Int     @default(1)
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @default(now()) @updatedAt
-// }
-
-// model DateOfBirthList {
-//   id String @id @default(auto()) @map("_id") @db.ObjectId
-
-//   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-//   sanctionedId String     @db.ObjectId
-
-//   date      DateOfBith
-//   mainEntry Int        @default(1)
-//   comment   String?
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @default(now()) @updatedAt
-// }
-
-model Nationality {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-  sanctionedId String     @db.ObjectId
-
-  country   String?
-  code      String?
-  mainEntry Int     @default(1)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+type Info {
+  type           String?
+  value          String?
+  issueDate      String?
+  expirationDate String?
 }
 
-model Citizenship {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-  sanctionedId String     @db.ObjectId
-
-  country   String?
-  code      String?
-  mainEntry Int?    @default(1)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+type Nationality {
+  isoCode String?
+  country String?
 }
 
-// model AkaList {
-//   id String @id @default(auto()) @map("_id") @db.ObjectId
-
-//   sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-//   sanctionedId String     @db.ObjectId
-
-//   category    String?
-//   type        String?
-//   firstName   String?
-//   middleName  String?
-//   lastName    String?
-//   defaultName String?
-//   comment     String?
-// }
-
-model SanctionList {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-
-  name            String
-  publicationDate DateTime? @db.Date
-  file            String?
-  numberOfLine    Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  santioned Sanctioned[]
+type Citizenship {
+  isoCode String?
+  country String?
 }
 
 enum Gender {
-  M
-  F
+  Male
+  Female
 }
 
 type Country {
   isoCode String?
-  name String?
+  name    String?
 }
 
 type DateOfBith {
@@ -150,33 +88,12 @@ type PlaceOfBirth {
   place           String?
   stateOrProvince String?
   postalCode      String?
-  zipCode         String?
   country         Country?
 }
 
-model Adresse {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-
-  sanctioned   Sanctioned @relation(fields: [sanctionedId], references: [id], onDelete: NoAction)
-  sanctionedId String     @db.ObjectId
-
+type Addresse {
   place           String?
   stateOrProvince String?
   postalCode      String?
-  zipCode         String?
   country         Country?
-}
-
-type SubjectType {
-  code  String?
-  label String?
-}
-
-type Aka {
-  type        String?
-  firstName   String?
-  middleName  String?
-  lastName    String?
-  defaultName String?
-  comment     String?
 }

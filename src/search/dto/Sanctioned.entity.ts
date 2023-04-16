@@ -1,24 +1,22 @@
 import { DateOfBith } from '@prisma/client';
 
 export type Nationality = {
-  country: string | null;
-  code: string | null;
+  country: string;
+  isoCode: string;
 };
 
 export type Sanction = {
   id: string;
-  name: string | null;
+  name: string;
 };
 
 export class SanctionedEntity {
   id: string;
-  firstName: string;
-  middleName: string;
-  lastName: string;
   defaultName: string;
   type: string;
-  originalName: string;
-  otherNames: Array<string>;
+  remarks: string;
+  sanction: Sanction;
+  publicationUrl: string;
   dateOfBirth?: DateOfBith;
-  nationality?: Nationality;
+  nationality?: Nationality[];
 }

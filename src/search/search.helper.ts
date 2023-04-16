@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { ConfigService } from '@nestjs/config';
-import * as i18nIsoCountries from 'i18n-iso-countries';
-import * as fs from 'fs';
+import { unlink } from 'fs';
 import * as StringSimilarity from 'string-similarity';
 import { SearchOutput } from './dto/search.output.dto';
 import { SearchParamDto } from './dto/search.param.dto';
+import { Nationality } from './dto/Sanctioned.entity';
 
 @Injectable()
 export class SearchHelper {
@@ -13,81 +13,10 @@ export class SearchHelper {
   constructor(private config: ConfigService) {}
   // map sanctioned data into sanctionedDto
   getNames(result: any) {
-    const names = [];
-    let firstName;
-    let middleName;
-    let lastName;
-    let fullName = '';
-    const tempFullName = [];
-
-    if (result.entity.firstName != null) {
-      firstName = result.entity.firstName.trim();
-      if (firstName.includes(' ')) {
-        names.push(firstName);
-      }
-      tempFullName.push(firstName);
-    }
-    if (result.entity.middleName != null) {
-      middleName = result.entity.middleName.trim();
-      if (middleName.includes(' ')) {
-        names.push(middleName);
-      }
-      tempFullName.push(middleName);
-    }
-    if (result.entity.lastName != null) {
-      lastName = result.entity.lastName.trim();
-      if (lastName.includes(' ')) {
-        names.push(lastName);
-      }
-      tempFullName.push(lastName);
-    }
-    if (typeof result.entity.defaultName != 'undefined')
-      names.push(result.entity.defaultName);
-
-    if (tempFullName.length > 0) {
-      fullName = tempFullName.join(' ');
-      if (!names.includes(fullName)) names.push(fullName);
-      if (tempFullName.length >= 2) {
-        fullName = tempFullName.reverse().join(' ');
-        if (!names.includes(fullName)) names.push(fullName);
-      }
-    }
-
-    if (result.alias) {
-      for (const alias of result.alias) {
-        const tempFullAlias = [];
-        if (alias.firstName != null) {
-          firstName = alias.firstName.trim();
-          if (firstName.includes(' ')) {
-            names.push(firstName);
-          }
-          tempFullAlias.push(firstName);
-        }
-        if (alias.middleName != null) {
-          middleName = alias.middleName.trim();
-          if (middleName.includes(' ')) {
-            names.push(middleName);
-          }
-          tempFullAlias.push(middleName);
-        }
-        if (alias.lastName != null) {
-          lastName = alias.lastName.trim();
-          if (lastName.includes(' ')) {
-            names.push(lastName);
-          }
-          tempFullAlias.push(lastName);
-        }
-
-        if (tempFullAlias.length > 0) {
-          fullName = tempFullAlias.join(' ');
-          if (!names.includes(fullName)) names.push(fullName);
-          if (tempFullAlias.length >= 2) {
-            fullName = tempFullAlias.reverse().join(' ');
-            if (!names.includes(fullName)) names.push(fullName);
-          }
-        }
-      }
-    }
+    let names = [];
+    names.push(result.entity.defaultName);
+    if (result.alias && result.alias.length > 0)
+      names = names.concat(result.alias);
     return names;
   }
 
@@ -95,78 +24,44 @@ export class SearchHelper {
   mapSearchResult(result: any, fullName: string): SearchOutput {
     const entity = {
       id: result.entity.id,
-      firstName: result.entity.firstName,
-      middleName: result.entity.middleName,
-      lastName: result.entity.lastName,
       defaultName: result.entity.defaultName,
-      originalName: result.entity.original_name,
-      otherNames: result.entity.otherNames,
       type: result.entity.type,
+      remarks: result.remarks,
       sanction: result.sanction,
+      publicationUrl: result.publicationUrl,
     };
 
     if (result.nationality && result.dateOfBirth != null) {
-      entity['dateOfBirth'] = result.dateOfBirth.date;
+      entity['dateOfBirth'] = result.dateOfBirth;
     }
 
     if (result.nationality && result.nationality != null) {
       entity['nationality'] = result.nationality;
     }
     const names = this.getNames(result);
-    const score: number = this.setPercentage(names, fullName);
+    console.log(names);
+    const score = this.setPercentage(names, fullName);
 
     return { entity, score };
   }
 
   // merge akalist and sanctioned  and remove duplicate data
-  cleanSearch(sanctioned: any[], aka: any[], fullName?: string): any[] {
-    //Merge aka and sanctioned results
-    const mergedData: any[] = sanctioned.concat(aka);
-    console.log({ sanctionedcount: sanctioned.length });
-    console.log({ akaCount: aka.length });
+  cleanSearch(searchResult: any[], fullName?: string): any[] {
     //remove duplicate
-    const indexes = [];
-    const cleanData = [];
-    mergedData.forEach((item) => {
-      if (!indexes.includes(item.entity.id)) {
-        indexes.push(item.entity.id);
-        const cleanItem = this.mapSearchResult(item, fullName);
-        cleanData.push(cleanItem);
-      }
+    const cleanData = searchResult.map((item) => {
+      return this.mapSearchResult(item, fullName);
     });
-
-    const publicDir = this.config.get('FILE_LOCATION');
-
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir);
-    }
-    console.log({ cleanedCount: cleanData.length });
-    cleanData.sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
+    cleanData.sort((a, b) => b.score - a.score);
+    console.log({ searchResult: searchResult.length });
     return cleanData;
   }
 
-  mergeSearch(data: any[]): any[] {
-    this.logger.log('Cleanning search result from AkaList and Sanctioned ...');
-    const indexes = [];
-    const filtered = [];
-
-    if (data.length > 1) {
-      data.forEach(function (item) {
-        if (!indexes.includes(item.entity.id)) {
-          indexes.push(item.entity.id);
-          filtered.push(item);
-        }
-      });
-    }
-    return filtered;
-  }
-
   //Apply nationality and date of birth filters to retrieved data
-  filterCompleteSearch(response: any[], body: SearchParamDto) {
+  filteredSearch(response: any[], body: SearchParamDto) {
     let filteredData = response;
 
     //check if sanctionId is provided in request parameters
-    if (Array.isArray(body.sanction)) {
+    if (body.sanction) {
       this.logger.log('====== Filtering by sanction...');
       filteredData = filteredData.filter((value) => {
         return body.sanction.includes(value.entity.sanction.id);
@@ -179,39 +74,26 @@ export class SearchHelper {
       if (body.dob.length != 4 && body.dob.length != 7)
         throw new BadRequestException('dob value must be YYYY-MM or YYYY');
 
-      const tempData = [];
-      let check: boolean;
-      response.forEach((value: any) => {
+      const tempData = filteredData.filter((value: any) => {
         if (value.entity.dateOfBirth) {
-          check = this.checkDate(value.entity.dateOfBirth, body.dob);
-          if (check) tempData.push(value);
+          return this.checkDate(value.entity.dateOfBirth, body.dob);
         }
       });
       filteredData = tempData;
-      console.log({ filteredCount: filteredData.length });
+      console.log({ Datefiltered: filteredData.length });
     }
 
     if (body.nationality) {
       this.logger.log('====== Filtering by natinality...');
-      filteredData = filteredData.filter((value: any) => {
-        let test = false;
+      const tempData = filteredData.filter((value: any) => {
         if (value.entity.nationality) {
-          if (value.entity.nationality.code != null) {
-            console.log(value.entity.nationality.code);
-            test = body.nationality.includes(value.entity.nationality.code);
-            console.log(test);
-          } else {
-            const nationalities = this.getNationalityNames(body.nationality);
-            test = this.checkNationality(
-              value.entity.nationality.country,
-              nationalities,
-            );
-            console.log(test);
+          for (const isoCode of body.nationality) {
+            return this.checkNationality(value.entity.nationality, isoCode);
           }
         }
-        return test;
       });
-      console.log({ filteredCount: filteredData.length });
+      filteredData = tempData;
+      console.log({ nationalityfiltered: filteredData.length });
     }
 
     return filteredData;
@@ -336,11 +218,7 @@ export class SearchHelper {
     const publicDir = this.config.get('FILE_LOCATION');
     const pathToFile = publicDir + fileName;
 
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir);
-    }
-
-    await fs.unlink(pathToFile, function (err) {
+    await unlink(pathToFile, function (err) {
       if (err) {
         console.log(err);
       } else {
@@ -354,11 +232,11 @@ export class SearchHelper {
   }
 
   //clean data for excel
-  mapExcelData(array: any[], searchInput: string, resultCount: number): any[] {
+  mapExcelData(array: any[], searchInput: string): any[] {
     this.logger.log('----- Mapping data for Excel');
     const cleanData = [];
 
-    if (resultCount > 0) {
+    if (array.length > 0) {
       let dobString = null;
       let nationality = null;
 
@@ -383,28 +261,9 @@ export class SearchHelper {
         }
 
         if (elt.entity.nationality)
-          nationality = elt.entity.nationality.country;
+          nationality = elt.entity.nationality[0].country;
 
-        if (
-          elt.entity.firstName ||
-          elt.entity.middleName ||
-          elt.entity.lastName
-        ) {
-          if (elt.entity.firstName != null)
-            name = name + ' ' + elt.entity.firstName;
-          if (elt.entity.middleName != null)
-            name = name + ' ' + elt.entity.middleName;
-          if (elt.entity.lastName != null)
-            name = name + ' ' + elt.entity.lastName;
-        } else {
-          if (elt.entity.originalName != null) {
-            name = name + ' ' + elt.entity.originalName;
-          } else {
-            for (const value of elt.entity.otherNames) {
-              name = name + ' ' + value;
-            }
-          }
-        }
+        name = elt.entity.defaultName;
 
         const DETAIL_URL = this.config.get('DETAIL_URL');
         cleanData.push({
@@ -424,45 +283,7 @@ export class SearchHelper {
         matchRate: '0.00 %',
       });
     }
-
     return cleanData;
-  }
-
-  getNationalityNames(codes: string[]) {
-    let result = [];
-    codes.map(async (elt) => {
-      const countryCode = elt.toUpperCase();
-      const nameFr = i18nIsoCountries.getName(countryCode, 'fr');
-      const nameEn = i18nIsoCountries.getName(countryCode, 'en');
-
-      let arrayFr = [];
-      if (nameFr) arrayFr = this.transformName(nameFr);
-      let arrayEn;
-      if (nameEn) arrayEn = this.transformName(nameEn);
-
-      const tempArray = arrayFr.concat(arrayEn);
-      result = result.concat(tempArray);
-    });
-    result = result.filter((value) => typeof value != 'undefined');
-    console.log({ nationalityFromCode: result });
-    return result;
-  }
-
-  removeAccents(text: string): string {
-    return text.normalize('NFD').replace(/\p{Diacritic}/gu, '');
-  }
-
-  transformName(name: string): string[] {
-    const cleanedName = this.toCapitalizeWord(this.removeAccents(name.trim()));
-    let tempArray = [];
-    if (cleanedName.trim().includes(' ')) {
-      tempArray = cleanedName.trim().split(' ');
-      return tempArray.filter((item) => {
-        if (item.length > 3) return item;
-      });
-    } else {
-      return [cleanedName];
-    }
   }
 
   checkDate(responseDate, bodyDate: string): boolean {
@@ -478,38 +299,19 @@ export class SearchHelper {
   }
 
   checkNationality(
-    santionedNationality: string,
-    codeNationality: string[],
+    entityNationalities: Nationality[],
+    requestNationality: string,
   ): boolean {
-    const nationalities = this.transformName(santionedNationality);
-    console.log({ sanctionedNationalityDecomposed: nationalities });
     let test = false;
-    nationalities.forEach((name) => {
-      for (const country of codeNationality) {
-        const score = StringSimilarity.compareTwoStrings(
-          name.toLowerCase(),
-          country.toLowerCase(),
-        );
-        if (score > 0.8) {
-          test = true;
-          break;
-        }
+    for (const name of entityNationalities) {
+      const isoCode = name.isoCode.toLowerCase();
+      const reqCode = requestNationality.toLowerCase();
+      if (isoCode === reqCode) {
+        test = true;
+        break;
       }
-    });
+    }
     return test;
-  }
-
-  toCapitalizeWord(str: string): string {
-    const reg = /[- ]/;
-    try {
-      const splitStr = str.toLowerCase().split(reg);
-      for (let i = 0; i < splitStr.length; i++) {
-        splitStr[i] =
-          splitStr[i].charAt(0).toUpperCase() + splitStr[i].substring(1);
-      }
-      // Directly return the joined string
-      return splitStr.join(' ');
-    } catch (error) {}
   }
 
   //transform score into percentage

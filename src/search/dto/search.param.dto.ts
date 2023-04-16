@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export type sanctionedType = 'individual' | 'entity' | 'person';
+export type sanctionedType = 'individual' | 'entity' | 'vessel';
 export class SearchParamDto {
   @ApiProperty()
   fullName: string;

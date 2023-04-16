@@ -7,13 +7,17 @@ import { MigrationService } from './migration.service';
 export class MigrationController {
   constructor(private readonly migrationService: MigrationService) {}
 
-  @Get()
-  async migrate() {
-    //this.migrationService.migrateAllToMongo();
-  }
-
+  //@Get()
+  // async migrate() {
+  //   //this.migrationService.migrateAllToMongo();
+  // }
   @Get('update')
   async update() {
+    return this.migrationService.updateAllToMongo();
+  }
+
+  @Get('source')
+  async getSource() {
     return this.migrationService.getFileSource();
   }
 }

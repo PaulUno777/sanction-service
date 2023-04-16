@@ -6,9 +6,11 @@ import { MigrationModule } from './migration/migration.module';
 import { SanctionedModule } from './sanctioned/sanctioned.module';
 import { SearchModule } from './search/search.module';
 import { SanctionModule } from './sanction/sanction.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     MigrationModule,

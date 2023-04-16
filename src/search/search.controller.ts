@@ -36,7 +36,7 @@ export class SearchController {
   })
   @Get()
   search(@Query() query: Record<string, any>) {
-    //return this.searchService.searchSimple(String(query.text));
+    return this.searchService.searchSimple(String(query.text));
   }
 
   @Get('filter')
@@ -102,11 +102,11 @@ export class SearchController {
     if (body.sanction) {
       if (body.sanction.length <= 0 || Array.isArray(body.sanction) == false)
         throw new BadRequestException(
-          'Invalid parameter ! sanction be unempty list of sanction ids',
+          'Invalid parameter ! sanction must be unempty list of sanction ids',
         );
     }
 
-    //return this.searchService.searchfiltered(body);
+    return this.searchService.searchfiltered(body);
   }
 
   @ApiExcludeEndpoint()
