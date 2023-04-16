@@ -121,19 +121,18 @@ export class MigrationService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async getFileSource() {
-    //manage source directory
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
+    const PUBLIC_DIR = this.config.get('FILE_LOCATION');
+    //manage source directory
     if (!existsSync(SOURCE_DIR)) {
       mkdirSync(SOURCE_DIR);
       console.log('sanction source directory created');
     }
-
     //delete all file in directory
-
-    readdir(SOURCE_DIR, (err, files) => {
+    readdir(PUBLIC_DIR, (err, files) => {
       if (err) throw err;
       for (const file of files) {
-        unlink(join(SOURCE_DIR, file), (err) => {
+        unlink(join(PUBLIC_DIR, file), (err) => {
           if (err) throw err;
         });
       }

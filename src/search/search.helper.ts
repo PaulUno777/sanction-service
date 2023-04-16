@@ -35,8 +35,8 @@ export class SearchHelper {
       entity['dateOfBirth'] = result.dateOfBirth;
     }
 
-    if (result.nationality && result.nationality != null) {
-      entity['nationality'] = result.nationality;
+    if (result.nationality && result.nationality.length > 0) {
+      entity['nationalities'] = result.nationality;
     }
     const names = this.getNames(result);
     console.log(names);

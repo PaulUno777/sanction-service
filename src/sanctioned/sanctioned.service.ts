@@ -94,7 +94,7 @@ export class SanctionedService {
         entityType: elt.type,
         sanctionId: elt.listId,
         defaultName: elt['defaultName'],
-        alias: elt['akas'],
+        otherNames: elt['akas'],
         sanctioName: elt['Sanction'].name,
       };
     });

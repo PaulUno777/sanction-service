@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { catchError, firstValueFrom, map } from 'rxjs';
-import { AxiosError } from 'axios';
+import { catchError, firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
-import { parseString, parser } from 'xml2js';
 import { parseStringPromise } from 'xml2js';
 import { createWriteStream, readFileSync, unlink } from 'fs';
 import { getName } from 'i18n-iso-countries';
@@ -151,7 +149,7 @@ export class MigrationHelper {
   async getSanctionIat() {
     const url = this.config.get('ITA_SOURCE');
     //request
-    await this.saveJsonFromXml(url, 'liste_IAT');
+    await this.saveJsonFromJson(url, 'liste_IAT');
   }
 
   //map and save sanction into file
