@@ -88,7 +88,7 @@ echo ITA_SOURCE=${ITA_SOURCE} >> .env;
 
     stage('Get app Log') {
       steps {
-        sh 'docker container logs kmx-sanction-service'
+        sh 'docker logs -f --tail 30 kmx-sanction-service'
       }
     }
 
