@@ -17,7 +17,6 @@ ls -la'''
     stage('Add env variables') {
       environment {
         DATABASE_URL = '\'mongodb+srv://sanctionsexplorer:Sancti0nsP4ss@cluster0.nq3ns.gcp.mongodb.net/sanctionsexplorer?retryWrites=true&w=majority\''
-        MYSQL_URL = '{"host": "localhost", "user": "root", "database": "sanction_explorer", "password": "Admin123"}'
         PER_PAGE = '20'
         PORT = '3000'
         TIME_ZONE = '1'

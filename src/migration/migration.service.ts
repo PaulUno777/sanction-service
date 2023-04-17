@@ -113,7 +113,7 @@ export class MigrationService {
 
   async mongoDeleteMany(collection: string, client: MongoClient) {
     await client.connect();
-    const database = client.db('conformity_db');
+    const database = client.db('sanctionsexplorer');
     const col = database.collection(collection);
     const deleted = (await col.deleteMany({})).deletedCount;
     console.log(`${Number(deleted)} element(s) deleted`);
@@ -124,6 +124,10 @@ export class MigrationService {
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
     const PUBLIC_DIR = this.config.get('FILE_LOCATION');
     //manage source directory
+    if (!existsSync(PUBLIC_DIR)) {
+      mkdirSync(PUBLIC_DIR);
+      console.log('sanction source directory created');
+    }
     if (!existsSync(SOURCE_DIR)) {
       mkdirSync(SOURCE_DIR);
       console.log('sanction source directory created');

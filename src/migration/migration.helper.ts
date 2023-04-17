@@ -131,13 +131,6 @@ export class MigrationHelper {
     const jsonData = response.data;
     const jsonFilePath = `${SOURCE_DIR}${fileName}.json`;
     const writeStream = createWriteStream(jsonFilePath);
-    await unlink(jsonFilePath, function (err) {
-      if (err) {
-        console.log(err);
-      } else {
-        console.log('Successfully deleted the file.');
-      }
-    });
     writeStream.write(JSON.stringify(jsonData));
     this.logger.log(
       `Successfully get and write data to ${SOURCE_DIR}${fileName}.json`,
