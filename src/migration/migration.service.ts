@@ -33,8 +33,10 @@ export class MigrationService {
     this.logger.log('Updating sanctionList Collection...');
     //Get the lastest lists
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const jsonFilePath = `${SOURCE_DIR}source_link.json`;
-    const cleanData = JSON.parse(readFileSync(jsonFilePath, 'utf8'));
+    const fileName = 'source_link.json';
+    const cleanData = JSON.parse(
+      readFileSync(join(process.cwd(), SOURCE_DIR + fileName), 'utf8'),
+    );
 
     //insert one element to apply MongoDB collection
     const { id, ...oneData } = cleanData[0];
@@ -63,8 +65,10 @@ export class MigrationService {
     this.logger.log('Updating sanctioned Collection...');
     //Get the last updated element from source file
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const jsonFilePath = `${SOURCE_DIR}clean_source.json`;
-    const cleanData = JSON.parse(readFileSync(jsonFilePath, 'utf8'));
+    const fileName = 'clean_source.json';
+    const cleanData = JSON.parse(
+      readFileSync(join(process.cwd(), SOURCE_DIR + fileName), 'utf8'),
+    );
 
     //insert one element to apply MongoDB collection
     await this.prisma.sanctioned.create({

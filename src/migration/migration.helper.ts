@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { parseStringPromise } from 'xml2js';
 import { createWriteStream, readFileSync, unlink } from 'fs';
 import { getName } from 'i18n-iso-countries';
+import { join } from 'path';
 
 @Injectable()
 export class MigrationHelper {
@@ -150,8 +151,10 @@ export class MigrationHelper {
   mapSanction() {
     this.logger.log('====== Mapping Cleaning & Saving data From IAT Source...');
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const jsonFilePath = `${SOURCE_DIR}liste_ITA.json`;
-    const dataIat = JSON.parse(readFileSync(jsonFilePath, 'utf8'));
+    const fileName = 'source_link.json';
+    const dataIat = JSON.parse(
+      readFileSync(join(process.cwd(), SOURCE_DIR + fileName), 'utf8'),
+    );
 
     const lists = [
       {
@@ -254,11 +257,15 @@ export class MigrationHelper {
   //map and save sanction into file
   mapSanctioned() {
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const iatFilePath = `${SOURCE_DIR}liste_IAT.json`;
-    const jsonFilePath = `${SOURCE_DIR}source_link.json`;
-
-    const dataIat = JSON.parse(readFileSync(iatFilePath, 'utf8'));
-    const lists = JSON.parse(readFileSync(jsonFilePath, 'utf8'));
+    const listeIatFileName = 'liste_IAT.json';
+    const listeLinkFileName = 'source_link.json';
+    //read file contents
+    const dataIat = JSON.parse(
+      readFileSync(join(process.cwd(), SOURCE_DIR + listeIatFileName), 'utf8'),
+    );
+    const lists = JSON.parse(
+      readFileSync(join(process.cwd(), SOURCE_DIR + listeLinkFileName), 'utf8'),
+    );
 
     const sources: any = dataIat.results;
     //map
