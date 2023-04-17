@@ -139,18 +139,18 @@ export class MigrationHelper {
   }
 
   // International Trade Administration sanction source
-  async getSanctionIat() {
+  async getSanctionIta() {
     this.logger.log('====== Getting Santion From IAT Source...');
     const url = this.config.get('ITA_SOURCE');
     //request
-    await this.saveJsonFromJson(url, 'liste_IAT');
+    await this.saveJsonFromJson(url, 'liste_ITA');
   }
 
   //map and save sanction into file
   mapSanction() {
     this.logger.log('====== Mapping Cleaning & Saving data From IAT Source...');
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const jsonFilePath = `${SOURCE_DIR}liste_IAT.json`;
+    const jsonFilePath = `${SOURCE_DIR}liste_ITA.json`;
     const dataIat = JSON.parse(readFileSync(jsonFilePath, 'utf8'));
 
     const lists = [
@@ -295,7 +295,6 @@ export class MigrationHelper {
           const date = this.cleanDate(item.dates_of_birth[0]);
           entity['dateOfBirth'] = this.formatDate(date);
         }
-        console.log(entity['dateOfBirth']);
       }
       //### place of birth
       if (
@@ -457,46 +456,5 @@ export class MigrationHelper {
     const writeStream = createWriteStream(sourceLinkFile);
     writeStream.write(JSON.stringify(cleanSource));
     writeStream.end();
-  }
-
-  // DGT sanction from source
-  async getSanctionDgt() {
-    //get DGT file source
-    const url = this.config.get('DGT_SOURCE');
-    //request
-    await this.saveJsonFromJson(url, 'liste_DGT');
-  }
-  async getSanctionOfac() {
-    const url = this.config.get('OFAC_SOURCE');
-    //request
-    await this.saveJsonFromXml(url, 'liste_OFAC');
-  }
-
-  //United Nation sanction from source
-  async getSanctionUn() {
-    const url = this.config.get('UN_SOURCE');
-    //request
-    await this.saveJsonFromXml(url, 'liste_UN');
-  }
-
-  //Canada sanction from source
-  async getSanctionCa() {
-    const url = this.config.get('CA_SOURCE');
-    //request
-    await this.saveJsonFromXml(url, 'liste_CA');
-  }
-
-  //United Nation sanction from source
-  async getSanctionGbHmt() {
-    const url = this.config.get('GB_HMT_SOURCE');
-    //request
-    await this.saveJsonFromXml(url, 'liste_GB');
-  }
-
-  //United Nation sanction from source
-  async getSanctionSeco() {
-    const url = this.config.get('SECO_SOURCE');
-    //request
-    await this.saveJsonFromXml(url, 'liste_SECO');
   }
 }

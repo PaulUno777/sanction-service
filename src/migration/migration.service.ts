@@ -32,10 +32,6 @@ export class MigrationService {
   async updateSantionToMongo() {
     this.logger.log('Updating sanctionList Collection...');
     //Get the lastest lists
-    const publicDir = this.config.get('FILE_LOCATION');
-    if (!existsSync(publicDir)) {
-      mkdirSync(publicDir);
-    }
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
     const jsonFilePath = `${SOURCE_DIR}source_link.json`;
     const cleanData = JSON.parse(readFileSync(jsonFilePath, 'utf8'));
@@ -142,7 +138,7 @@ export class MigrationService {
       }
     });
 
-    await this.helper.getSanctionIat();
+    await this.helper.getSanctionIta();
     await this.helper.mapSanction();
     await this.helper.mapSanctioned();
     await this.updateAllToMongo();
