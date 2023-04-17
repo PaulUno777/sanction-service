@@ -20,11 +20,11 @@ ls -la'''
         PER_PAGE = '20'
         PORT = '3000'
         TIME_ZONE = '1'
-        FILE_LOCATION = '\'./public/\''
+        FILE_LOCATION = '\'public/\''
         DOWNLOAD_URL = 'http://sandbox.kamix.io:3000/api/search/download/'
         DETAIL_URL = 'http://sandbox.kamix.io:5000/sanction/'
         ITA_SOURCE = 'https://data.trade.gov/downloadable_consolidated_screening_list/v1/consolidated.json'
-        SOURCE_DIR = '\'./sanctions_source/\''
+        SOURCE_DIR = '\'sanctions_source/\''
       }
       steps {
         sh '''echo DATABASE_URL=${DATABASE_URL} >> .env;
