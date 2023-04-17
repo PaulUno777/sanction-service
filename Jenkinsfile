@@ -23,17 +23,21 @@ ls -la'''
         TIME_ZONE = '1'
         FILE_LOCATION = '\'./public/\''
         DOWNLOAD_URL = 'http://sandbox.kamix.io:3000/api/search/download/'
-        DETAIL_URL='http://sandbox.kamix.io:5000/sanction/'
+        DETAIL_URL = 'http://sandbox.kamix.io:5000/sanction/'
+        ITA_SOURCE = 'https://data.trade.gov/downloadable_consolidated_screening_list/v1/consolidated.json'
+        SOURCE_DIR = '\'./sanctions_source/\''
       }
       steps {
         sh '''echo DATABASE_URL=${DATABASE_URL} >> .env;
-echo MYSQL_URL=${MYSQL_URL} >> .env;
 echo PER_PAGE=${PER_PAGE} >> .env;
 echo PORT=${PORT} >> .env;
 echo TIME_ZONE=${TIME_ZONE} >> .env;
 echo FILE_LOCATION=${FILE_LOCATION} >> .env;
 echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;
-echo DETAIL_URL=${DETAIL_URL} >> .env;'''
+echo SOURCE_DIR=${SOURCE_DIR} >> .env;
+echo DETAIL_URL=${DETAIL_URL} >> .env;
+echo ITA_SOURCE=${ITA_SOURCE} >> .env;
+'''
         sh 'cat .env'
       }
     }
@@ -84,7 +88,7 @@ echo DETAIL_URL=${DETAIL_URL} >> .env;'''
 
     stage('Get app Log') {
       steps {
-        sh 'docker container logs kmx-sanction-service'
+        sh 'docker logs -f --tail 30 kmx-sanction-service'
       }
     }
 
