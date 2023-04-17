@@ -126,7 +126,7 @@ export class MigrationService {
     //manage source directory
     if (!existsSync(PUBLIC_DIR)) {
       mkdirSync(PUBLIC_DIR);
-      console.log('sanction source directory created');
+      console.log('public directory created');
     }
     if (!existsSync(SOURCE_DIR)) {
       mkdirSync(SOURCE_DIR);

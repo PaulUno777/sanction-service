@@ -140,6 +140,7 @@ export class MigrationHelper {
 
   // International Trade Administration sanction source
   async getSanctionIat() {
+    this.logger.log('====== Getting Santion From IAT Source...');
     const url = this.config.get('ITA_SOURCE');
     //request
     await this.saveJsonFromJson(url, 'liste_IAT');
@@ -147,6 +148,7 @@ export class MigrationHelper {
 
   //map and save sanction into file
   mapSanction() {
+    this.logger.log('====== Mapping Cleaning & Saving data From IAT Source...');
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
     const jsonFilePath = `${SOURCE_DIR}liste_IAT.json`;
     const dataIat = JSON.parse(readFileSync(jsonFilePath, 'utf8'));
