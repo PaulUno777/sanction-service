@@ -67,7 +67,7 @@ export class SearchHelper {
       });
       console.log({ filteredCount: filteredData.length });
     }
-
+    //filter by date of birth
     if (body.dob) {
       this.logger.log('====== Filtering by date of birth...');
       if (body.dob.length != 4 && body.dob.length != 7)
@@ -81,13 +81,13 @@ export class SearchHelper {
       filteredData = tempData;
       console.log({ Datefiltered: filteredData.length });
     }
-
+    //filter by nationalities
     if (body.nationality) {
       this.logger.log('====== Filtering by natinality...');
       const tempData = filteredData.filter((value: any) => {
-        if (value.entity.nationality) {
+        if (value.entity.nationalities) {
           for (const isoCode of body.nationality) {
-            return this.checkNationality(value.entity.nationality, isoCode);
+            return this.checkNationality(value.entity.nationalities, isoCode);
           }
         }
       });
