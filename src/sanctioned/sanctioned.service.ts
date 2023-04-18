@@ -120,6 +120,9 @@ export class SanctionedService {
       where: {
         id: id,
       },
+      include: {
+        Sanction: true,
+      },
     });
     return {
       data: sanctionedData,
