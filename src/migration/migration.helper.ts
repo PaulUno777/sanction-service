@@ -3,9 +3,8 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
 import { parseStringPromise } from 'xml2js';
-import { createWriteStream, readFileSync, unlink } from 'fs';
+import { createWriteStream, unlink } from 'fs';
 import { getName } from 'i18n-iso-countries';
-import { join } from 'path';
 
 @Injectable()
 export class MigrationHelper {
@@ -119,6 +118,22 @@ export class MigrationHelper {
     writeStream.end();
   }
 
+  async downloadData(fileName: string) {
+    const downloadLink =
+      'http://localhost:3000/api/migration/download/' + fileName;
+    const response = await firstValueFrom(
+      this.httpService.get(downloadLink).pipe(
+        catchError((error) => {
+          this.logger.error(error);
+          throw `An error happened with ${downloadLink}!`;
+        }),
+      ),
+    );
+    const jsonData = response.data;
+    console.log(jsonData);
+    return jsonData;
+  }
+
   async saveJsonFromJson(downloadLink: string, fileName: string): Promise<any> {
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
     const response = await firstValueFrom(
@@ -141,20 +156,17 @@ export class MigrationHelper {
 
   // International Trade Administration sanction source
   async getSanctionIta() {
-    this.logger.log('====== Getting Santion From IAT Source...');
+    this.logger.log('====== Getting Santion From ITA Source...');
     const url = this.config.get('ITA_SOURCE');
     //request
     await this.saveJsonFromJson(url, 'liste_ITA');
   }
 
   //map and save sanction into file
-  mapSanction() {
-    this.logger.log('====== Mapping Cleaning & Saving data From IAT Source...');
+  async mapSanction() {
+    this.logger.log('====== Mapping Cleaning & Saving data From ITA Source...');
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const fileName = 'source_link.json';
-    const dataIat = JSON.parse(
-      readFileSync(join(process.cwd(), SOURCE_DIR + fileName), 'utf8'),
-    );
+    const dataIat = await this.downloadData('liste_ITA.json');
 
     const lists = [
       {
@@ -255,17 +267,12 @@ export class MigrationHelper {
   }
 
   //map and save sanction into file
-  mapSanctioned() {
+  async mapSanctioned() {
+    this.logger.log('====== Mapping Cleaning & Saving data From ITA Source...');
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const listeIatFileName = 'liste_IAT.json';
-    const listeLinkFileName = 'source_link.json';
     //read file contents
-    const dataIat = JSON.parse(
-      readFileSync(join(process.cwd(), SOURCE_DIR + listeIatFileName), 'utf8'),
-    );
-    const lists = JSON.parse(
-      readFileSync(join(process.cwd(), SOURCE_DIR + listeLinkFileName), 'utf8'),
-    );
+    const dataIat = await this.downloadData('liste_ITA.json');
+    const lists = await this.downloadData('source_link.json');
 
     const sources: any = dataIat.results;
     //map

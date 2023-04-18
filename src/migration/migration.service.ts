@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MongoClient } from 'mongodb';
 import { MigrationHelper } from './migration.helper';
-import { existsSync, mkdirSync, readFileSync, readdir, unlink } from 'fs';
+import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
@@ -32,11 +32,7 @@ export class MigrationService {
   async updateSantionToMongo() {
     this.logger.log('Updating sanctionList Collection...');
     //Get the lastest lists
-    const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const fileName = 'source_link.json';
-    const cleanData = JSON.parse(
-      readFileSync(join(process.cwd(), SOURCE_DIR + fileName), 'utf8'),
-    );
+    const cleanData = await this.helper.downloadData('source_link.json');
 
     //insert one element to apply MongoDB collection
     const { id, ...oneData } = cleanData[0];
@@ -64,11 +60,7 @@ export class MigrationService {
   async updateSantionedToMongo() {
     this.logger.log('Updating sanctioned Collection...');
     //Get the last updated element from source file
-    const SOURCE_DIR = this.config.get('SOURCE_DIR');
-    const fileName = 'clean_source.json';
-    const cleanData = JSON.parse(
-      readFileSync(join(process.cwd(), SOURCE_DIR + fileName), 'utf8'),
-    );
+    const cleanData = await this.helper.downloadData('clean_source.json');
 
     //insert one element to apply MongoDB collection
     await this.prisma.sanctioned.create({
@@ -123,24 +115,18 @@ export class MigrationService {
   async getFileSource() {
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
     const PUBLIC_DIR = this.config.get('FILE_LOCATION');
+    //delete all file in public directory
+    rmSync(PUBLIC_DIR, { recursive: true, force: true });
+
     //manage source directory
-    if (!existsSync(PUBLIC_DIR)) {
-      mkdirSync(PUBLIC_DIR);
+    if (!existsSync(join(process.cwd(), PUBLIC_DIR))) {
+      mkdirSync(join(process.cwd(), PUBLIC_DIR));
       console.log('public directory created');
     }
-    if (!existsSync(SOURCE_DIR)) {
-      mkdirSync(SOURCE_DIR);
+    if (!existsSync(join(process.cwd(), SOURCE_DIR))) {
+      mkdirSync(join(process.cwd(), SOURCE_DIR));
       console.log('sanction source directory created');
     }
-    //delete all file in directory
-    readdir(PUBLIC_DIR, (err, files) => {
-      if (err) throw err;
-      for (const file of files) {
-        unlink(join(PUBLIC_DIR, file), (err) => {
-          if (err) throw err;
-        });
-      }
-    });
 
     await this.helper.getSanctionIta();
     await this.helper.mapSanction();
