@@ -30,6 +30,8 @@ model Sanctioned {
   Sanction SanctionList @relation(fields: [listId], references: [id])
   listId   String       @db.ObjectId
 
+  firstName      String?
+  lastName       String?
   defaultName    String?
   gender         Gender?
   type           String?
@@ -37,11 +39,11 @@ model Sanctioned {
   dateOfBirth    DateOfBith?
   placeOfBirth   PlaceOfBirth?
   title          String?
-  remarks         String?
+  remarks        String?
   programs       String[]      @default([])
   references     String[]      @default([])
   publicationUrl String?
-  
+
   addresses     Addresse[]
   nationalities Nationality[]
   citizenships  Citizenship[]
@@ -54,6 +56,7 @@ model Sanctioned {
 type Info {
   type           String?
   value          String?
+  comment        String?
   issueDate      String?
   expirationDate String?
 }

@@ -4,7 +4,7 @@ import { catchError, firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
 import { parseStringPromise } from 'xml2js';
 import { createWriteStream, unlink } from 'fs';
-import { getName } from 'i18n-iso-countries';
+import { getName, getAlpha2Code } from 'i18n-iso-countries';
 
 @Injectable()
 export class MigrationHelper {
@@ -130,7 +130,6 @@ export class MigrationHelper {
       ),
     );
     const jsonData = response.data;
-    console.log(jsonData);
     return jsonData;
   }
 
@@ -156,10 +155,340 @@ export class MigrationHelper {
 
   // International Trade Administration sanction source
   async getSanctionIta() {
-    this.logger.log('====== Getting Santion From ITA Source...');
+    this.logger.log('====== Getting Sanstion From ITA Source...');
     const url = this.config.get('ITA_SOURCE');
     //request
     await this.saveJsonFromJson(url, 'liste_ITA');
+  }
+
+  async getSanctionDgt() {
+    this.logger.log('====== Getting Sanction From DGT Source...');
+    const url = this.config.get('DGT_SOURCE');
+    //request
+    await this.saveJsonFromJson(url, 'liste_DGT');
+  }
+
+  // Iternational Trade Administration
+  async mapSanctionIta() {
+    this.logger.log('====== Mapping Cleaning & Saving data From ITA Source...');
+    const SOURCE_DIR = this.config.get('SOURCE_DIR');
+    const dataIat = await this.downloadData('liste_ITA.json');
+
+    const lists = [
+      {
+        id: 1,
+        liste: 'Capta List (CAP) - Treasury Department',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list-non-sdn-lists/list-of-foreign-financial-institutions-subject-to-correspondent-account-or-payable-through-account-sanctions-capta-list',
+      },
+      {
+        id: 2,
+        liste:
+          'Non-SDN Chinese Military-Industrial Complex Companies List (CMIC) - Treasury Department',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list/ns-cmic-list',
+      },
+      {
+        id: 3,
+        liste: 'Denied Persons List (DPL) - Bureau of Industry and Security',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list/ns-cmic-list',
+      },
+      {
+        id: 4,
+        liste: 'ITAR Debarred (DTC) - State Department',
+        link: 'https://www.pmddtc.state.gov/ddtc_public?id=ddtc_kb_article_page&sys_id=c22d1833dbb8d300d0a370131f9619f0',
+      },
+      {
+        id: 5,
+        liste: 'Entity List (EL) - Bureau of Industry and Security',
+        link: 'https://www.pmddtc.state.gov/ddtc_public?id=ddtc_kb_article_page&sys_id=c22d1833dbb8d300d0a370131f9619f0',
+      },
+      {
+        id: 6,
+        liste: 'Foreign Sanctions Evaders (FSE) - Treasury Department',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list-non-sdn-lists/foreign-sanctions-evaders-fse-list',
+      },
+      {
+        id: 7,
+        liste: 'Nonproliferation Sanctions (ISN) - State Department',
+        link: 'https://www.state.gov/key-topics-bureau-of-international-security-and-nonproliferation/nonproliferation-sanctions/',
+      },
+      {
+        id: 8,
+        liste:
+          'Non-SDN Menu-Based Sanctions List (NS-MBS List) - Treasury Department',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list-non-sdn-lists/non-sdn-menu-based-sanctions-list-ns-mbs-list',
+      },
+      {
+        id: 9,
+        liste: 'Military End User (MEU) List - Bureau of Industry and Security',
+        link: 'https://www.bis.doc.gov/index.php/policy-guidance/lists-of-parties-of-concern',
+      },
+      {
+        id: 10,
+        liste:
+          'Palestinian Legislative Council List (PLC) - Treasury Department',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list/non-sdn-palestinian-legislative-council-ns-plc-list',
+      },
+      {
+        id: 11,
+        liste: 'Specially Designated Nationals (SDN) - Treasury Department',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/specially-designated-nationals-and-blocked-persons-list-sdn-human-readable-lists',
+      },
+      {
+        id: 12,
+        liste:
+          'Sectoral Sanctions Identifications List (SSI) - Treasury Department',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list-non-sdn-lists/sectoral-sanctions-identifications-ssi-list',
+      },
+      {
+        id: 13,
+        liste: 'Unverified List (UVL) - Bureau of Industry and Security',
+        link: 'https://home.treasury.gov/policy-issues/financial-sanctions/consolidated-sanctions-list-non-sdn-lists/sectoral-sanctions-identifications-ssi-list',
+      },
+    ];
+
+    const sources: any = dataIat.sources_used;
+    const cleanSource = sources.map((item) => {
+      let listUrl;
+      let id;
+      lists.forEach((element) => {
+        if (item.source == element.liste) {
+          listUrl = element.link;
+          id = element.id;
+        }
+      });
+      return {
+        id: this.transformId(id),
+        name: item.source,
+        sourceUrl: listUrl,
+        importRate: item.import_rate,
+        lastImported: item.last_imported,
+        publicationDate: item.source_last_updated,
+      };
+    });
+
+    return cleanSource;
+  }
+
+  // Sanctions financières internationales
+  async mapSanctionDgt() {
+    this.logger.log('====== Mapping Cleaning & Saving data From DGT Source...');
+    const SOURCE_DIR = this.config.get('SOURCE_DIR');
+    const dataDgt = await this.downloadData('liste_DGT.json');
+
+    const list = {
+      id: this.transformId(14),
+      name: 'National Register of Gels (DGT) - Directorate of the Treasury',
+      sourceUrl: 'https://gels-avoirs.dgtresor.gouv.fr/List',
+      importRate: 'Hourly',
+      lastImported: dataDgt.Publications.DatePublication,
+      publicationDate: dataDgt.Publications.DatePublication,
+    };
+
+    const sources: any = dataDgt.Publications.PublicationDetail;
+    const cleanSource = sources.map((item) => {
+      const entity = {
+        id: this.transformId(item.IdRegistre),
+        defaultName: item.Nom,
+        listId: '140123456789012345678901',
+        othersInfos: [],
+        references: [],
+        addresses: [],
+      };
+      let othersInfos = [];
+      //type
+      if (item.Nature) {
+        if (item.Nature == 'Personne physique') entity['type'] = 'Individual';
+        if (item.Nature == 'Personne morale') entity['type'] = 'Entity';
+      }
+      const details = item.RegistreDetail;
+
+      details.forEach((detail) => {
+        //names
+        if (detail.TypeChamp == 'PRENOM') {
+          entity['lastName'] = item.Nom;
+          entity['firstName'] = detail.Valeur[0].Prenom;
+          entity['defaultName'] =
+            entity['defaultName'] + ' ' + entity['firstName'];
+        }
+        //gender
+        if (detail.TypeChamp == 'SEXE') {
+          if (detail.Valeur[0].Sexe == 'Masculin') entity['gender'] = 'Male';
+          if (detail.Valeur[0].Sexe == 'Féminin') entity['gender'] = 'Female';
+        }
+        //akas
+        if (detail.TypeChamp == 'ALIAS') {
+          const akas = [];
+          detail.Valeur.forEach((aka) => {
+            akas.push(aka.Alias);
+          });
+          entity['akas'] = akas;
+        }
+        //remarks
+        if (detail.TypeChamp == 'MOTIFS')
+          entity['remarks'] = detail.Valeur[0].Motifs;
+        //dateOfBirth
+        if (detail.TypeChamp == 'DATE_DE_NAISSANCE') {
+          const date = {};
+          if (detail.Valeur[0].Jour != '') date['day'] = detail.Valeur[0].Jour;
+          if (detail.Valeur[0].Mois != '')
+            date['month'] = detail.Valeur[0].Mois;
+          if (detail.Valeur[0].Annee != '')
+            date['year'] = detail.Valeur[0].Annee;
+          entity['dateOfBirth'] = date;
+        }
+        //placeOfBirth
+        if (detail.TypeChamp == 'LIEU_DE_NAISSANCE') {
+          const data = { place: detail.Valeur[0].Lieu };
+          if (detail.Valeur[0].Pays != '')
+            data['country'] = {
+              name: detail.Valeur[0].Pays,
+              isoCode: getAlpha2Code(detail.Valeur[0].Pays, 'fr'),
+            };
+          entity['placeOfBirth'] = data;
+        }
+        //title
+        if (detail.TypeChamp == 'TITRE') {
+          entity['title'] = detail.Valeur[0].Titre;
+          if (detail.Valeur.length > 1) {
+            const data = detail.Valeur;
+            const tmpArray = data.map((elt) => {
+              return {
+                value: elt.Titre,
+                type: 'otherTitle',
+              };
+            });
+            othersInfos = othersInfos.concat(tmpArray);
+          }
+        }
+        //programs
+        const programs = [];
+        if (detail.TypeChamp == 'REFERENCE_UE') {
+          detail.Valeur.forEach((ref) => {
+            programs.push(ref.ReferenceUe);
+          });
+        }
+        if (detail.TypeChamp == 'REFERENCE_ONU') {
+          detail.Valeur.forEach((ref) => {
+            programs.push(ref.ReferenceOnu);
+          });
+        }
+        entity['programs'] = programs;
+        //references
+        const references = [];
+        if (detail.TypeChamp == 'FONDEMENT_JURIDIQUE') {
+          detail.Valeur.forEach((ref) => {
+            references.push(
+              `${ref.FondementJuridique} - ${ref.FondementJuridiqueLabel}`,
+            );
+          });
+        }
+        entity['references'] = references;
+
+        //addresses
+        if (detail.TypeChamp == 'ADRESSE_PM') {
+          const data = {};
+          if (detail.Valeur[0].Adresse != '')
+            data['place'] = detail.Valeur[0].Adresse;
+          if (detail.Valeur[0].Pays != '')
+            data['country'] = {
+              name: detail.Valeur[0].Pays,
+              isoCode: getAlpha2Code(detail.Valeur[0].Pays, 'fr'),
+            };
+          entity.addresses = [data];
+        }
+
+        //nationalities
+        if (detail.TypeChamp == 'NATIONALITE') {
+          const data = { country: detail.Valeur[0].Pays };
+          data['isoCode'] = getAlpha2Code(detail.Valeur[0].Pays, 'fr');
+          entity['nationalities'] = [data];
+        }
+        //othersInfos
+        if (detail.TypeChamp == 'AUTRE_IDENTITE') {
+          const data = {
+            value: detail.Valeur[0].NumeroCarte,
+            type: 'CardNumber',
+          };
+          if (detail.Valeur[0].Commentaire != '')
+            data['comment'] = detail.Valeur[0].Commentaire;
+          othersInfos.push(data);
+        }
+
+        if (detail.TypeChamp == 'PASSEPORT') {
+          detail.Valeur.forEach((elt) => {
+            othersInfos.push({
+              comment: elt.Commentaire,
+              value: elt.NumeroPasseport,
+              type: 'Passport',
+            });
+          });
+        }
+
+        if (detail.TypeChamp == 'TELEPHONE') {
+          detail.Valeur.forEach((elt) => {
+            othersInfos.push({
+              value: elt.Telephone,
+              type: 'PhoneNumber',
+            });
+          });
+        }
+
+        if (detail.TypeChamp == 'SITE_INTERNET') {
+          detail.Valeur.forEach((elt) => {
+            othersInfos.push({
+              value: elt.SiteInternet,
+              type: 'WebSite',
+            });
+          });
+        }
+
+        if (detail.TypeChamp == 'COURRIEL') {
+          detail.Valeur.forEach((elt) => {
+            othersInfos.push({
+              value: elt.Courriel,
+              type: 'Mail',
+            });
+          });
+        }
+
+        if (detail.TypeChamp == 'NUMERO_OMI') {
+          detail.Valeur.forEach((elt) => {
+            othersInfos.push({
+              value: elt.NumeroOMI,
+              type: 'NumeroOmi',
+            });
+          });
+        }
+
+        if (detail.TypeChamp == 'IDENTIFICATION') {
+          detail.Valeur.forEach((elt) => {
+            othersInfos.push({
+              comment: elt.Commentaire,
+              value: elt.Identification,
+              type: 'Identification',
+            });
+          });
+        }
+
+        if (detail.TypeChamp == 'CRYPTOMONNAIE') {
+          detail.Valeur.forEach((elt) => {
+            othersInfos.push({
+              comment: elt.Commentaire,
+              value: elt.Cryptomonnaie,
+              type: 'Crypto',
+            });
+          });
+        }
+      });
+      entity['othersInfos'] = othersInfos;
+      return entity;
+    });
+
+    const finalData = { list: list, result: cleanSource };
+    const sourceLinkFile = `${SOURCE_DIR}clean_DGT.json`;
+    const writeStream = createWriteStream(sourceLinkFile);
+    writeStream.write(JSON.stringify(finalData));
+    writeStream.end();
   }
 
   //map and save sanction into file

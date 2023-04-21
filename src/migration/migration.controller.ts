@@ -33,6 +33,11 @@ export class MigrationController {
     return this.migrationService.updateAllToMongo();
   }
 
+  @Get('test')
+  async test() {
+    return this.migrationService.test();
+  }
+
   @HttpCode(HttpStatus.OK)
   @Header('Content-Type', 'application/json')
   @Get('download/:file')

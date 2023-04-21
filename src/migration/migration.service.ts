@@ -60,11 +60,17 @@ export class MigrationService {
   async updateSantionedToMongo() {
     this.logger.log('Updating sanctioned Collection...');
     //Get the last updated element from source file
-    const cleanData = await this.helper.downloadData('clean_source.json');
+    const cleanIta = await this.helper.downloadData('clean_source.json');
+    const cleanDgt = await this.helper.downloadData('clean_DGT.json');
+
+    //add DGT list
+    await this.prisma.sanctionList.create({
+      data: cleanDgt.list,
+    });
 
     //insert one element to apply MongoDB collection
     await this.prisma.sanctioned.create({
-      data: cleanData[0],
+      data: cleanIta[0],
     });
 
     //delete all elements in collection
@@ -78,13 +84,34 @@ export class MigrationService {
     let data: any[];
     let result;
     let count = 0;
-    if (cleanData.length <= 5000) {
-      result = await this.prisma.sanctioned.createMany({ data: cleanData });
+    //ITA
+    if (cleanIta.length <= 5000) {
+      result = await this.prisma.sanctioned.createMany({ data: cleanIta });
       count += result.count;
     } else {
-      for (let i = 0; i <= cleanData.length; i += 1000) {
-        if (i >= cleanData.length) i = cleanData.length;
-        data = cleanData.slice(i, i + 1000);
+      for (let i = 0; i <= cleanIta.length; i += 1000) {
+        if (i >= cleanIta.length) i = cleanIta.length;
+        data = cleanIta.slice(i, i + 1000);
+        if (data.length > 0) {
+          result = await this.prisma.sanctioned.createMany({ data: data });
+        }
+        count += result.count;
+      }
+    }
+    this.logger.log({
+      message: `${Number(count)} element(s) inserted`,
+    });
+    //DGT
+    count = 0;
+    if (cleanDgt.result.length <= 5000) {
+      result = await this.prisma.sanctioned.createMany({
+        data: cleanDgt.result,
+      });
+      count += result.count;
+    } else {
+      for (let i = 0; i <= cleanDgt.result.length; i += 1000) {
+        if (i >= cleanDgt.result.length) i = cleanDgt.result.length;
+        data = cleanDgt.result.slice(i, i + 1000);
         if (data.length > 0) {
           result = await this.prisma.sanctioned.createMany({ data: data });
         }
@@ -131,8 +158,13 @@ export class MigrationService {
     await this.helper.getSanctionIta();
     await this.helper.mapSanction();
     await this.helper.mapSanctioned();
+    await this.helper.getSanctionDgt();
+    await this.helper.mapSanctionDgt();
     await this.updateAllToMongo();
 
     this.logger.log('All jobs perform  well !');
+  }
+  async test() {
+    return await this.helper.mapSanctionDgt();
   }
 }
