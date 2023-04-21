@@ -25,6 +25,7 @@ ls -la'''
         DETAIL_URL = 'http://sandbox.kamix.io:5000/sanction/'
         ITA_SOURCE = 'https://data.trade.gov/downloadable_consolidated_screening_list/v1/consolidated.json'
         SOURCE_DIR = '\'sanctions_source/\''
+        DGT_SOURCE = '\'https://gels-avoirs.dgtresor.gouv.fr/ApiPublic/api/v1/publication/derniere-publication-flux-json\''
       }
       steps {
         sh '''echo DATABASE_URL=${DATABASE_URL} >> .env;
@@ -36,6 +37,7 @@ echo DOWNLOAD_URL=${DOWNLOAD_URL} >> .env;
 echo SOURCE_DIR=${SOURCE_DIR} >> .env;
 echo DETAIL_URL=${DETAIL_URL} >> .env;
 echo ITA_SOURCE=${ITA_SOURCE} >> .env;
+echo DGT_SOURCE=${DGT_SOURCE} >> .env;
 '''
         sh 'cat .env'
       }
