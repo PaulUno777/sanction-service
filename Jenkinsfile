@@ -26,6 +26,8 @@ ls -la'''
         ITA_SOURCE = 'https://data.trade.gov/downloadable_consolidated_screening_list/v1/consolidated.json'
         SOURCE_DIR = '\'sanctions_source/\''
         DGT_SOURCE = '\'https://gels-avoirs.dgtresor.gouv.fr/ApiPublic/api/v1/publication/derniere-publication-flux-json\''
+        UN_SOURCE = '\'https://scsanctions.un.org/resources/xml/fr/consolidated.xml\''
+        UE_SOURCE = '\'https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw\''
       }
       steps {
         sh '''echo DATABASE_URL=${DATABASE_URL} >> .env;
@@ -38,6 +40,8 @@ echo SOURCE_DIR=${SOURCE_DIR} >> .env;
 echo DETAIL_URL=${DETAIL_URL} >> .env;
 echo ITA_SOURCE=${ITA_SOURCE} >> .env;
 echo DGT_SOURCE=${DGT_SOURCE} >> .env;
+echo UN_SOURCE=${UN_SOURCE} >> .env;
+echo UE_SOURCE=${UE_SOURCE} >> .env;
 '''
         sh 'cat .env'
       }
