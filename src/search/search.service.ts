@@ -156,7 +156,6 @@ export class SearchService {
 
     // Request query to mongoDB
     //----- in sanctioned collection
-    this.logger.log('in sanctioned collection ...');
     const result: any = await this.prisma.sanctioned.aggregateRaw({
       pipeline: sanctionedPipeline,
     });
@@ -168,7 +167,6 @@ export class SearchService {
 
     //check if no results
     if (filtered.length <= 0) {
-      this.logger.log('(success !) all is well');
       return {
         resultsCount: filtered.length,
         resultsFile: null,
@@ -273,18 +271,15 @@ export class SearchService {
 
     // Request query to mongoDB
     //----- in sanctioned collection
-    this.logger.log('searching sanctioned collection ...');
     const result: any = await this.prisma.sanctioned.aggregateRaw({
       pipeline: sanctionedPipeline,
     });
-    this.logger.log('(success !) searching');
 
     //merge sanctioned and aka result into one array and remove duplicate
     const cleanedData = await this.helper.cleanSearch(result, text);
 
     //check if no results
     if (cleanedData.length <= 0) {
-      this.logger.log('(success !) all is well');
       return {
         resultsCount: cleanedData.length,
         resultsFile: null,

@@ -39,17 +39,11 @@ export class SanctionedService {
 
     //Elements per page
     const PER_PAGE = limit || 20;
-    const count: number = (await this.prisma.sanctioned.count()) | 0;
+    let count: number = await this.prisma.sanctioned.count();
     const order = orderBy;
 
     const currentPage: number = Math.max(Number(page) || 1, 1);
     const pageNumber: number = currentPage - 1;
-
-    const lastPage = Math.ceil(count / PER_PAGE);
-    let prev = null;
-    let next = null;
-    if (currentPage != 1) prev = currentPage - 1;
-    if (currentPage != lastPage) next = currentPage + 1;
 
     //set order
     let ordener;
@@ -76,6 +70,11 @@ export class SanctionedService {
         skip: pageNumber * PER_PAGE,
         take: PER_PAGE,
       };
+      count = await this.prisma.sanctioned.count({
+        where: {
+          listId: sanctionId,
+        },
+      });
     } else {
       queryOptions = {
         orderBy: ordener,
@@ -87,7 +86,7 @@ export class SanctionedService {
       };
     }
     const sanctioned = await this.prisma.sanctioned.findMany(queryOptions);
-    console.log(queryOptions);
+    this.logger.log(queryOptions);
     const cleanData = sanctioned.map((elt) => {
       return {
         id: elt.id,
@@ -98,9 +97,16 @@ export class SanctionedService {
         sanctioName: elt['Sanction'].name,
       };
     });
-    this.logger.log({
-      message: `${Number(cleanData.length)} element(s) finded`,
-    });
+
+    //calculate meta data
+    const lastPage = Math.ceil(count / PER_PAGE);
+    let prev = null;
+    let next = null;
+    if (currentPage != 1) prev = currentPage - 1;
+    if (currentPage != lastPage) next = currentPage + 1;
+
+    this.logger.log('(success !) all is well');
+
     return {
       data: cleanData,
       meta: {
@@ -115,7 +121,7 @@ export class SanctionedService {
   }
 
   async findOne(id: string) {
-    this.logger.log(`finding by id ... \n id = ${id}`);
+    this.logger.log(`===== finding by id ====\n Id = ${id}`);
     const sanctionedData = await this.prisma.sanctioned.findUnique({
       where: {
         id: id,
@@ -124,8 +130,74 @@ export class SanctionedService {
         Sanction: true,
       },
     });
+
+    this.logger.log('(success !) all is well');
     return {
       data: sanctionedData,
+    };
+  }
+
+  async findBySanction(sanctionId: string, page?: number): Promise<any> {
+    if (page) {
+      if (typeof page != 'number')
+        throw new BadRequestException('page must be a number');
+    }
+    if (sanctionId.length != 24)
+      throw new BadRequestException('sanctionId length must be a 24');
+
+    const PER_PAGE = 20;
+    const currentPage: number = Math.max(Number(page) || 1, 1);
+    const pageNumber: number = currentPage - 1;
+    //perform request to mongoBD
+    const queryOptions = {
+      where: {
+        listId: sanctionId,
+      },
+      include: {
+        Sanction: true,
+      },
+      skip: pageNumber * PER_PAGE,
+      take: PER_PAGE,
+    };
+    queryOptions['orderBy'] = { defaultName: 'asc' };
+    console.log(queryOptions);
+
+    const result: any = await this.prisma.sanctioned.findMany(queryOptions);
+    const count: any = await this.prisma.sanctioned.count({
+      where: {
+        listId: sanctionId,
+      },
+    });
+
+    const lastPage = Math.ceil(count / PER_PAGE);
+    let prev = null;
+    let next = null;
+    if (currentPage != 1) prev = currentPage - 1;
+    if (currentPage != lastPage) next = currentPage + 1;
+
+    const cleanData = result.map((elt) => {
+      return {
+        id: elt.id,
+        entityType: elt.type,
+        sanctionId: elt.listId,
+        defaultName: elt['defaultName'],
+        otherNames: elt['akas'],
+        sanctioName: elt['Sanction'].name,
+      };
+    });
+
+    this.logger.log(`${Number(cleanData.length)} element(s) finded`);
+
+    return {
+      data: cleanData,
+      meta: {
+        total: count,
+        lastPage: lastPage,
+        currentPage: currentPage,
+        perPage: PER_PAGE,
+        prev: prev,
+        next: next,
+      },
     };
   }
 }

@@ -18,28 +18,33 @@ export class MigrationService {
     private helper: MigrationHelper,
   ) {}
 
-  //=========Main method for all Updates================
+  //====== Main method for all Updates =============
   async updateAllToMongo() {
+    //delete all elements in collection
+    const client = this.getMongoClient();
+    await this.mongoDeleteMany('Sanctioned', client).finally(() =>
+      client.close(),
+    );
     const result = await Promise.all([
-      await this.updateSantionToMongo(),
-      await this.updateSantionedToMongo(),
+      await this.migrateSanctionList(),
+      await this.migrateSanctionedIta(),
+      await this.migrateSanctionedDgt(),
+      await this.migrateSanctionedUn(),
+      await this.migrateSanctionedUe(),
     ]);
     this.logger.log('All is well !');
     return result;
   }
 
-  // //==== Method for sanctionList migration ================
-  async updateSantionToMongo() {
-    this.logger.log('Updating sanctionList Collection...');
-    //Get the lastest lists
-    const cleanData = await this.helper.downloadData('source_link.json');
-
-    //insert one element to apply MongoDB collection
-    const { id, ...oneData } = cleanData[0];
+  // //======= Method for sanctionList migration =========
+  async migrateSanctionList() {
+    this.logger.log('migrating sanction List');
+    const data = await this.helper.downloadData('clean_list.json');
+    //init MongoDB collection
+    const { id, ...oneData } = data[0];
     await this.prisma.sanctionList.create({
       data: oneData,
     });
-
     //delete all elements in collection
     const client = this.getMongoClient();
     await this.mongoDeleteMany('SanctionList', client).finally(() =>
@@ -47,81 +52,75 @@ export class MigrationService {
     );
     // Apply updates
     const result = await this.prisma.sanctionList.createMany({
-      data: cleanData,
+      data: data,
     });
     this.logger.log({
-      message: `${Number(result.count)} element(s) updated`,
+      message: `${Number(result.count)} element(s) migrated to SanctionList`,
     });
-    return { sanctionListCount: result.count };
+    return {
+      message: `${Number(result.count)} element(s) migrated to SanctionList`,
+    };
   }
 
-  // ===== Method for sanctioned migration ========================
-  //----- Update database -------
-  async updateSantionedToMongo() {
-    this.logger.log('Updating sanctioned Collection...');
-    //Get the last updated element from source file
-    const cleanIta = await this.helper.downloadData('clean_source.json');
-    const cleanDgt = await this.helper.downloadData('clean_DGT.json');
-
-    //add DGT list
-    await this.prisma.sanctionList.create({
-      data: cleanDgt.list,
-    });
-
-    //insert one element to apply MongoDB collection
-    await this.prisma.sanctioned.create({
-      data: cleanIta[0],
-    });
-
-    //delete all elements in collection
-    const client = this.getMongoClient();
-    await this.mongoDeleteMany('Sanctioned', client).finally(() =>
-      client.close(),
-    );
-
-    //migrate all to MongoDB
+  async migrateData(list: any[]) {
+    //==== migrate all to MongoDB
     //push data in data in batches of 1000 to avoid errors and timeouts
     let data: any[];
     let result;
     let count = 0;
     //ITA
-    if (cleanIta.length <= 5000) {
-      result = await this.prisma.sanctioned.createMany({ data: cleanIta });
+    if (list.length <= 2000) {
+      result = await this.prisma.sanctioned.createMany({ data: list });
       count += result.count;
     } else {
-      for (let i = 0; i <= cleanIta.length; i += 1000) {
-        if (i >= cleanIta.length) i = cleanIta.length;
-        data = cleanIta.slice(i, i + 1000);
+      for (let i = 0; i <= list.length; i += 1000) {
+        if (i >= list.length) i = list.length;
+        data = list.slice(i, i + 1000);
         if (data.length > 0) {
           result = await this.prisma.sanctioned.createMany({ data: data });
         }
         count += result.count;
       }
     }
-    this.logger.log({
-      message: `${Number(count)} element(s) inserted`,
-    });
-    //DGT
-    count = 0;
-    if (cleanDgt.result.length <= 5000) {
-      result = await this.prisma.sanctioned.createMany({
-        data: cleanDgt.result,
-      });
-      count += result.count;
-    } else {
-      for (let i = 0; i <= cleanDgt.result.length; i += 1000) {
-        if (i >= cleanDgt.result.length) i = cleanDgt.result.length;
-        data = cleanDgt.result.slice(i, i + 1000);
-        if (data.length > 0) {
-          result = await this.prisma.sanctioned.createMany({ data: data });
-        }
-        count += result.count;
-      }
-    }
-    this.logger.log({
-      message: `${Number(count)} element(s) inserted`,
-    });
-    return { SantionedCount: count };
+    return {
+      message: `${Number(count)} element(s) migrated`,
+    };
+  }
+
+  //----- migrate ITA data -------
+  async migrateSanctionedIta() {
+    this.logger.log('migrationg ITA sanctioned Collection...');
+    //Get the data from source file
+    const { results } = await this.helper.downloadData('clean_ITA.json');
+    //migrate all to MongoDB
+    return await this.migrateData(results);
+  }
+
+  //----- migrate DGT data -------
+  async migrateSanctionedDgt() {
+    this.logger.log('migrationg DGT sanctioned Collection...');
+    //Get the data from source file
+    const { results } = await this.helper.downloadData('clean_DGT.json');
+    //migrate all to MongoDB
+    return await this.migrateData(results);
+  }
+
+  //----- migrate UN data -------
+  async migrateSanctionedUn() {
+    this.logger.log('migrationg UN sanctioned Collection...');
+    //Get the data from source file
+    const { results } = await this.helper.downloadData('clean_UN.json');
+    //migrate all to MongoDB
+    return await this.migrateData(results);
+  }
+
+  //----- migrate UN data -------
+  async migrateSanctionedUe() {
+    this.logger.log('migrationg EU sanctioned Collection...');
+    //Get the data from source file
+    const { results } = await this.helper.downloadData('clean_UE.json');
+    //migrate all to MongoDB
+    return await this.migrateData(results);
   }
 
   getMongoClient() {
@@ -155,16 +154,28 @@ export class MigrationService {
       console.log('sanction source directory created');
     }
 
+    //get and clean data
     await this.helper.getSanctionIta();
-    await this.helper.mapSanction();
-    await this.helper.mapSanctioned();
+    await this.helper.mapSanctionIta();
+
     await this.helper.getSanctionDgt();
     await this.helper.mapSanctionDgt();
+
+    await this.helper.getSanctionUn();
+    await this.helper.mapSanctionUn();
+
+    await this.helper.getSanctionUe();
+    await this.helper.mapSanctionUe();
+
+    //map & write sanction list
+    await this.helper.mapSanction();
+
+    //apply all unpdate
     await this.updateAllToMongo();
 
     this.logger.log('All jobs perform  well !');
   }
   async test() {
-    return await this.helper.mapSanctionDgt();
+    return await this.helper.mapSanctionUe();
   }
 }

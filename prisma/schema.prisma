@@ -31,6 +31,7 @@ model Sanctioned {
   listId   String       @db.ObjectId
 
   firstName      String?
+  middleName     String?
   lastName       String?
   defaultName    String?
   gender         Gender?
@@ -74,6 +75,9 @@ type Citizenship {
 enum Gender {
   Male
   Female
+  Unknown
+  MALE
+  FEMALE
 }
 
 type Country {

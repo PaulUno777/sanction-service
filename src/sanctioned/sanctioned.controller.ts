@@ -45,4 +45,21 @@ export class SanctionedController {
   findOne(@Param('id') id: string) {
     return this.sanctionedService.findOne(id);
   }
+
+  @ApiQuery({
+    name: 'page',
+    description: 'The page number',
+    required: false,
+    type: Number,
+  })
+  @Get('sanction/:sanctionId')
+  findBySanction(
+    @Param('sanctionId') sanctionId: string,
+    @Query() query: Record<string, any>,
+  ) {
+    return this.sanctionedService.findBySanction(
+      sanctionId,
+      Number(query.page),
+    );
+  }
 }

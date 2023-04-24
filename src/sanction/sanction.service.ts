@@ -9,7 +9,7 @@ export class SanctionService {
     this.logger.log('Getting sanction list ...');
     const sanctions = await this.prisma.sanctionList.findMany({
       orderBy: {
-        name: 'asc',
+        id: 'asc',
       },
     });
     this.logger.log('(success !) all is well');
