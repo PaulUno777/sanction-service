@@ -305,7 +305,7 @@ export class SearchHelper {
   checkPlaceOfBirth(placeOfBirth, isoCode: string): boolean{
     if(placeOfBirth){
       if(placeOfBirth.country) {
-        return isoCode === placeOfBirth.country.isoCode
+        return isoCode.toUpperCase() === placeOfBirth.country.isoCode
       }else{
         return false
       }
