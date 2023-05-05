@@ -87,7 +87,12 @@ export class SearchHelper {
       const tempData = filteredData.filter((value: any) => {
         if (value.entity.nationalities) {
           for (const isoCode of body.nationality) {
-            return this.checkNationality(value.entity.nationalities, isoCode);
+            if(
+              this.checkNationality(value.entity.nationalities, isoCode) ||
+              this.checkNationality(value.entity.citizenships, isoCode) ||
+              this.checkPlaceOfBirth(value.entity.placeOfBirth, isoCode)
+            )
+            return true;
           }
         }
       });
@@ -297,20 +302,36 @@ export class SearchHelper {
     return check;
   }
 
+  checkPlaceOfBirth(placeOfBirth, isoCode: string): boolean{
+    if(placeOfBirth){
+      if(placeOfBirth.country) {
+        return isoCode === placeOfBirth.country.isoCode
+      }else{
+        return false
+      }
+    }
+    return false;
+  }
+
   checkNationality(
     entityNationalities: Nationality[],
     requestNationality: string,
   ): boolean {
-    let test = false;
-    for (const name of entityNationalities) {
-      const isoCode = name.isoCode.toLowerCase();
-      const reqCode = requestNationality.toLowerCase();
-      if (isoCode === reqCode) {
-        test = true;
-        break;
+    if (entityNationalities instanceof Array) {
+      let test = false;
+      for (const name of entityNationalities) {
+        let isoCode = '';
+        if (name.isoCode) isoCode = name.isoCode.toLowerCase();
+        const reqCode = requestNationality.toLowerCase();
+        if (isoCode === reqCode) {
+          test = true;
+          break;
+        }
       }
+      return test;
+    }else{
+      return false;
     }
-    return test;
   }
 
   //transform score into percentage
