@@ -31,12 +31,20 @@ export class SearchHelper {
       publicationUrl: result.publicationUrl,
     };
 
-    if (result.nationality && result.dateOfBirth != null) {
+    if (result.dateOfBirth && result.dateOfBirth != null) {
       entity['dateOfBirth'] = result.dateOfBirth;
+    }
+
+    if (result.placeOfBirth && result.placeOfBirth != null) {
+      entity['placeOfBirth'] = result.placeOfBirth;
     }
 
     if (result.nationality && result.nationality.length > 0) {
       entity['nationalities'] = result.nationality;
+    }
+
+    if (result.citizenships && result.citizenships.length > 0) {
+      entity['citizenships'] = result.citizenships;
     }
     const names = this.getNames(result);
     const score = this.setPercentage(names, fullName);
@@ -87,12 +95,20 @@ export class SearchHelper {
       const tempData = filteredData.filter((value: any) => {
         if (value.entity.nationalities) {
           for (const isoCode of body.nationality) {
-            if(
-              this.checkNationality(value.entity.nationalities, isoCode) ||
-              this.checkNationality(value.entity.citizenships, isoCode) ||
-              this.checkPlaceOfBirth(value.entity.placeOfBirth, isoCode)
-            )
-            return true;
+            if (this.checkNationality(value.entity.nationalities, isoCode))
+              return true;
+          }
+        }
+        if (value.entity.citizenships) {
+          for (const isoCode of body.nationality) {
+            if (this.checkNationality(value.entity.citizenships, isoCode))
+              return true;
+          }
+        }
+        if (value.entity.placeOfBirth) {
+          for (const isoCode of body.nationality) {
+            if (this.checkPlaceOfBirth(value.entity.placeOfBirth, isoCode))
+              return true;
           }
         }
       });
@@ -302,12 +318,12 @@ export class SearchHelper {
     return check;
   }
 
-  checkPlaceOfBirth(placeOfBirth, isoCode: string): boolean{
-    if(placeOfBirth){
-      if(placeOfBirth.country) {
-        return isoCode.toUpperCase() === placeOfBirth.country.isoCode
-      }else{
-        return false
+  checkPlaceOfBirth(placeOfBirth, isoCode: string): boolean {
+    if (placeOfBirth) {
+      if (placeOfBirth.country) {
+        return isoCode.toUpperCase() === placeOfBirth.country.isoCode;
+      } else {
+        return false;
       }
     }
     return false;
@@ -315,21 +331,21 @@ export class SearchHelper {
 
   checkNationality(
     entityNationalities: Nationality[],
-    requestNationality: string,
+    bodyIsoCode: string,
   ): boolean {
     if (entityNationalities instanceof Array) {
       let test = false;
       for (const name of entityNationalities) {
         let isoCode = '';
         if (name.isoCode) isoCode = name.isoCode.toLowerCase();
-        const reqCode = requestNationality.toLowerCase();
+        const reqCode = bodyIsoCode.toLowerCase();
         if (isoCode === reqCode) {
           test = true;
           break;
         }
       }
       return test;
-    }else{
+    } else {
       return false;
     }
   }
