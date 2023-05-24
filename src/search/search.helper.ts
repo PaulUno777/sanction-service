@@ -67,6 +67,14 @@ export class SearchHelper {
   filteredSearch(response: any[], body: SearchParamDto) {
     let filteredData = response;
 
+    //filter by score if needed
+    if (body.matchRate) {
+      this.logger.log('====== Filtering by score...');
+      filteredData = filteredData.filter((value) => {
+        return value.score >= body.matchRate;
+      });
+    }
+
     //check if sanctionId is provided in request parameters
     if (body.sanction) {
       this.logger.log('====== Filtering by sanction...');
@@ -75,6 +83,7 @@ export class SearchHelper {
       });
       console.log({ filteredCount: filteredData.length });
     }
+  
     //filter by date of birth
     if (body.dob) {
       this.logger.log('====== Filtering by date of birth...');

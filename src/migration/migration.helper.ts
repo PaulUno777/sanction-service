@@ -1509,6 +1509,12 @@ export class MigrationHelper {
     writeStream.end();
   }
 
+  //Liste consolidée de sanctions financières de l’UE
+  // async getSanctionPep() {
+  //   const data = await this.downloadData('liste_PEP.json');
+  //   return data;
+  // }
+
   async getLists(fileName: string) {
     const { lists } = await this.downloadData(fileName);
     return lists;
@@ -1540,4 +1546,6 @@ export class MigrationHelper {
     writeStream.write(JSON.stringify(lists));
     writeStream.end();
   }
+
+  
 }

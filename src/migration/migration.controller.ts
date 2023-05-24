@@ -46,8 +46,7 @@ export class MigrationController {
     @Response({ passthrough: true }) res,
   ): StreamableFile {
     res.set({
-      'Content-Type': 'application/xlsx',
-      'Content-Disposition': 'attachment; filename="seach-result.xlsx',
+      'Content-Type': 'application/json',
     });
     const dir = this.config.get('SOURCE_DIR');
     const file: any = createReadStream(join(process.cwd(), dir + fileName));

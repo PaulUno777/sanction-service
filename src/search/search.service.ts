@@ -18,39 +18,27 @@ export class SearchService {
   async searchfiltered(body: SearchParamDto) {
     this.logger.log('Filtered searching ...');
     console.log(body);
-    let matchRate = 0.4;
     let maxEdits = 2;
-    let maxExpansions = 100;
+    let matchRate = 0.4;
     if (body.matchRate) {
-      const rates = [40, 50, 60, 70, 80];
       if (
-        !rates.includes(body.matchRate) ||
-        typeof body.matchRate != 'number'
+        typeof body.matchRate != 'number' ||
+        body.matchRate <= 0 ||
+        body.matchRate > 100
       ) {
         throw new BadRequestException(
-          'Invalid parameter ! matchRate must be a number in the set [50, 60, 70, 80]',
+          'Invalid parameter ! matchRate must be a number between 1 and 100',
         );
       } else {
-        switch (matchRate) {
-          case 50:
-            maxEdits = 2;
-            maxExpansions = 80;
-            break;
-          case 60:
-          case 70:
-            maxEdits = 2;
-            maxExpansions = 60;
-            break;
-          case 80:
-            maxEdits = 1;
-            maxExpansions = 40;
-            break;
-          default:
-            break;
+        if (body.matchRate > 80) {
+          maxEdits = 1;
         }
-        matchRate = body.matchRate / 100;
+        if (body.matchRate < 40) {
+          matchRate = body.matchRate / 100;
+        }
       }
     }
+
     ////$ $ $ $ $  SANCTIONED $ $ $ $ $ $
     const sanctionedPipeline: any = [
       {
@@ -62,7 +50,6 @@ export class SearchService {
             path: ['defaultName', 'akas'],
             fuzzy: {
               maxEdits: maxEdits,
-              maxExpansions: maxExpansions,
             },
           },
         },
@@ -152,7 +139,6 @@ export class SearchService {
         placeOfBirth: '$placeOfBirth',
         nationality: '$nationalities',
         citizenships: '$citizenships',
-        scoreAtlas: '$normalizedScore',
       },
     });
 
@@ -175,6 +161,7 @@ export class SearchService {
         results: filtered,
       };
     }
+
     //generate Excel file
     this.logger.log('Generating Excel file ...');
     const downloadUrl = this.config.get('DOWNLOAD_URL');
@@ -298,6 +285,7 @@ export class SearchService {
     const file = await this.helper.generateExcel(excelData, text);
 
     this.logger.log('(success !) all is well');
+
     return {
       resultsCount: cleanedData.length,
       resultsFile: `${downloadUrl}${file}`,

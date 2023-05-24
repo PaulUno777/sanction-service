@@ -176,6 +176,6 @@ export class MigrationService {
     this.logger.log('All jobs perform  well !');
   }
   async test() {
-    return await this.helper.mapSanctionUe();
+    //return await this.helper.getSanctionPep();
   }
 }
