@@ -19,7 +19,7 @@ export class SearchService {
     this.logger.log('Filtered searching ...');
     console.log(body);
     let maxEdits = 2;
-    let matchRate = 0.4;
+    let matchRate = 0.25;
     if (body.matchRate) {
       if (
         typeof body.matchRate != 'number' ||
@@ -234,7 +234,7 @@ export class SearchService {
         },
       },
       {
-        $match: { normalizedScore: { $gte: 0.4 } },
+        $match: { normalizedScore: { $gte: 0.25 } },
       },
       {
         $project: {
