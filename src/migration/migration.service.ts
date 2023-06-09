@@ -4,9 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MongoClient } from 'mongodb';
 import { MigrationHelper } from './migration.helper';
-import { existsSync, mkdirSync, rmSync } from 'fs';
+import { createReadStream, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { createInterface } from 'readline';
 
 @Injectable()
 export class MigrationService {
@@ -79,6 +80,8 @@ export class MigrationService {
         if (data.length > 0) {
           result = await this.prisma.sanctioned.createMany({ data: data });
         }
+
+
         count += result.count;
       }
     }
@@ -123,6 +126,36 @@ export class MigrationService {
     return await this.migrateData(results);
   }
 
+  //migrate PEPS data
+  async migratePep() {
+    const list = await this.helper.getPepList()
+
+    //push data in data in batches of 1000 to avoid errors and timeouts
+    let data: any[];
+    let result;
+    let count = 0;
+    //ITA
+    if (list.length <= 2000) {
+      result = await this.prisma.sanctioned.createMany({ data: list });
+      count += result.count;
+    } else {
+      for (let i = 0; i <= list.length; i += 1000) {
+        if (i >= list.length) i = list.length;
+        data = list.slice(i, i + 1000);
+        if (data.length > 0) {
+          result = await this.prisma.sanctioned.createMany({ data: data });
+        }
+
+
+        count += result.count;
+      }
+    }
+    return {
+      message: `${Number(count)} element(s) migrated`,
+    };
+    
+  }
+
   getMongoClient() {
     const url = this.config.get('DATABASE_URL');
     const client = new MongoClient(url);
@@ -144,16 +177,6 @@ export class MigrationService {
     //delete all file in public directory
     rmSync(PUBLIC_DIR, { recursive: true, force: true });
 
-    //manage source directory
-    if (!existsSync(join(process.cwd(), PUBLIC_DIR))) {
-      mkdirSync(join(process.cwd(), PUBLIC_DIR));
-      console.log('public directory created');
-    }
-    if (!existsSync(join(process.cwd(), SOURCE_DIR))) {
-      mkdirSync(join(process.cwd(), SOURCE_DIR));
-      console.log('sanction source directory created');
-    }
-
     //get and clean data
     await this.helper.getSanctionIta();
     await this.helper.mapSanctionIta();
@@ -170,12 +193,16 @@ export class MigrationService {
     //map & write sanction list
     await this.helper.mapSanction();
 
+    //PEPs
+    const downloadLink = this.config.get('PEP_SOURCE');
+    await this.helper.saveJsonFromJson(downloadLink, 'nested_PEP')
+
     //apply all unpdate
     await this.updateAllToMongo();
 
     this.logger.log('All jobs perform  well !');
   }
   async test() {
-    //return await this.helper.getSanctionPep();
+    return await this.helper.getPepList();
   }
 }

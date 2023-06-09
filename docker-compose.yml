@@ -3,6 +3,7 @@ services:
   server:
     container_name: kmx-sanction-service
     image: unoteck/kmx-sanction-service
+    restart: always
     env_file:
       - .env
     ports:

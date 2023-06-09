@@ -1,4 +1,4 @@
-import { DateOfBith } from '@prisma/client';
+import { DateObject } from '@prisma/client';
 
 export type Nationality = {
   country: string;
@@ -17,6 +17,6 @@ export class SanctionedEntity {
   remarks: string;
   sanction: Sanction;
   publicationUrl: string;
-  dateOfBirth?: DateOfBith;
+  dateOfBirth?: DateObject;
   nationality?: Nationality[];
 }

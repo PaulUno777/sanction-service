@@ -3,8 +3,9 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
 import { parseStringPromise } from 'xml2js';
-import { createWriteStream, unlink } from 'fs';
+import { createReadStream, createWriteStream, readFileSync, unlink } from 'fs';
 import { getName, getAlpha2Code } from 'i18n-iso-countries';
+import { createInterface } from 'readline';
 
 @Injectable()
 export class MigrationHelper {
@@ -166,6 +167,7 @@ export class MigrationHelper {
     //request
     await this.saveJsonFromJson(url, 'liste_ITA');
   }
+
   async mapSanctionIta() {
     this.logger.log('====== Mapping Cleaning & Saving data From ITA Source...');
     const SOURCE_DIR = this.config.get('SOURCE_DIR');
@@ -1509,6 +1511,301 @@ export class MigrationHelper {
     writeStream.end();
   }
 
+  async getPepList(): Promise<any> {
+    this.logger.log('====== Reading PoliticallyExposedPerson Saved File...');
+    const SOURCE_DIR = this.config.get('SOURCE_DIR');
+    const fileName = 'nested_PEP';
+
+    const stream = createReadStream(`${SOURCE_DIR}${fileName}.json`, {
+      encoding: 'utf8',
+    });
+    const reader = createInterface({ input: stream, crlfDelay: Infinity });
+
+    const dataArray = [];
+
+    for await (const line of reader) {
+      const obj = JSON.parse(line);
+
+      // if (obj.schema !== 'Person' && obj.schema !== 'Organization') {
+      //   console.log(obj);
+      // }
+
+      // if (obj.schema !== 'Organization' && obj.schema !== 'Company') {
+      //   console.log(obj);
+      // }
+
+      let alias = [];
+      let othersInfos = [];
+      let relations = [];
+
+      const entity = {
+        defaultName: obj.caption,
+        type: obj.schema,
+      };
+
+      if (obj.properties) {
+        const prop = obj.properties;
+        //firstName
+        if (prop.firstName) entity['firstName'] = prop.firstName[0];
+        //lastName
+        if (prop.lastName) entity['lastName'] = prop.lastName[0];
+        //alias
+        if (prop.alias) alias = prop.alias;
+        if (prop.name && prop.name.length > 1) {
+          const [, ...names] = prop.name;
+          alias.concat(names);
+          entity['alias'] = alias;
+        }
+        //gender
+        if (prop.gender) entity['gender'] = prop.gender[0];
+        //position
+        if (prop.status) entity['positions'] = prop.status;
+        //position
+        if (prop.position) entity['positions'] = prop.position;
+        //notes
+        if (prop.notes) entity['notes'] = prop.notes;
+        //dateOfBirth
+        if (prop.birthDate) {
+          entity['dateOfBirth'] = this.transformDate(prop.birthDate[0]);
+        }
+        //placeOfBirth
+        if (prop.birthPlace) entity['placeOfBirth'] = prop.birthPlace;
+        //website
+        if (prop.website) entity['website'] = prop.website[0];
+        //publicationUrl
+        if (prop.sourceUrl) entity['publicationUrl'] = prop.sourceUrl[0];
+        //addresses
+        if (prop.addressEntity) {
+          const addresses = prop.addressEntity;
+          entity['addresses'] = addresses.map((address) => {
+            const place = {
+              place: address.caption,
+            };
+            if (address.properties.city)
+              place['stateOrProvince'] = address.properties.city[0];
+            if (address.properties.country) {
+              const isoCode = address.properties.country[0];
+              place['country'] = {
+                isoCode: isoCode,
+                name: getName(isoCode, 'en'),
+              };
+            }
+            return place;
+          });
+        }
+        //citizenships
+        if (prop.country) {
+          let countries = [];
+          prop.country.forEach((country) => {
+            const place = {
+              isoCode: country,
+              name: getName(country, 'en'),
+            };
+            countries.push(place);
+          });
+          const filtered = countries.filter(
+            (country) => country.isoCode.length == 2 || country.name,
+          );
+          if (filtered.length > 0) entity['citizenships'] = filtered;
+        }
+        //nationalities
+        if (prop.nationality) {
+          let countries = [];
+          prop.nationality.forEach((country) => {
+            const place = {
+              isoCode: country,
+              name: getName(country, 'en'),
+            };
+            countries.push(place);
+          });
+          const filtered = countries.filter(
+            (country) => country.isoCode.length == 2 || country.name,
+          );
+          if (filtered.length > 0) entity['nationalities'] = filtered;
+        }
+        //othersInfos
+        if (prop.modifiedAt) {
+          othersInfos.push({
+            type: 'modifiedAt',
+            value: prop.modifiedAt[0],
+          });
+        }
+        if (prop.title) {
+          othersInfos.push({
+            type: 'title',
+            value: prop.title,
+          });
+        }
+        if (prop.keywords) {
+          othersInfos.push({
+            type: 'keywords',
+            value: prop.keywords,
+          });
+        }
+        if (prop.incorporationDate) {
+          othersInfos.push({
+            type: 'incorporationDate',
+            value: prop.incorporationDate,
+          });
+        }
+        if (prop.summary) {
+          othersInfos.push({
+            type: 'summary',
+            value: prop.summary,
+          });
+        }
+        if (prop.sector) {
+          othersInfos.push({
+            type: 'sector',
+            value: prop.sector,
+          });
+        }
+        if (prop.website) {
+          othersInfos.push({
+            type: 'website',
+            value: prop.website,
+          });
+        }
+        if (prop.email) {
+          othersInfos.push({
+            type: 'email',
+            value: prop.email,
+          });
+        }
+        if (prop.phone) {
+          othersInfos.push({
+            type: 'phone',
+            value: prop.phone,
+          });
+        }
+
+        if (othersInfos.length > 0) entity['othersInfos'] = othersInfos;
+        //relations
+        if (prop.unknownLinkTo) {
+          const links = prop.unknownLinkTo;
+          const cleanLinks = links.map((elt) => {
+            const eltProps = elt.properties;
+            let summary = [];
+            let names = [];
+            const link = {
+              nature: 'Unknown Link',
+              defaultName: eltProps.object[0].caption,
+              type: eltProps.object[0].schema,
+            };
+            if (eltProps.object[0].properties) {
+              const linkProp = eltProps.object[0].properties;
+              if (linkProp.alias) names = [...linkProp.alias, ...names];
+              if (linkProp.name)
+                names = [...new Set([...linkProp.name, ...names])];
+              if (names.length > 0) link['alias'] = names;
+              if (linkProp.gender) link['gender'] = linkProp.gender;
+              if (linkProp.position) link['positions'] = linkProp.position;
+              if (linkProp.notes) summary = [...summary, ...linkProp.notes];
+              if (linkProp.summary)
+                summary = [...new Set([...summary, ...linkProp.summary])];
+              if (summary.length > 0) link['notes'] = summary;
+              if (linkProp.incorporationDate)
+                link['incorporationDate'] = this.transformDate(
+                  linkProp.incorporationDate,
+                );
+              if (linkProp.country) {
+                let countries = [];
+                linkProp.country.forEach((country) => {
+                  const place = {
+                    isoCode: country,
+                    name: getName(country, 'en'),
+                  };
+                  countries.push(place);
+                });
+                const filtered = countries.filter((country) => country.name);
+                if (filtered.length > 0) link['citizenships'] = filtered;
+              }
+            }
+            return link;
+          });
+          relations = relations.concat(cleanLinks);
+
+          entity['relations'] = relations;
+          //createdAt
+
+          //console.log(prop.unknownLinkTo[0].properties.object[0].properties);
+          //console.log(prop);
+        }
+        if (prop.associations) {
+          const links = prop.associations;
+          const cleanLinks = links.map((elt) => {
+            const eltProps = elt.properties.person[0];
+            let names = [];
+            const link = {
+              nature: 'Associate',
+              defaultName: eltProps.caption,
+              type: eltProps.schema,
+            };
+            if (eltProps.properties) {
+              const linkProp = eltProps.properties;
+              if (linkProp.alias) names = [...linkProp.alias, ...names];
+              if (linkProp.name)
+                names = [...new Set([...linkProp.name, ...names])];
+              if (linkProp.gender) link['gender'] = linkProp.gender[0];
+              
+              if (linkProp.position) link['positions'] = linkProp.position;
+              if (linkProp.notes) link['notes'] = linkProp.notes;
+              if (linkProp.birthDate)
+                link['dateOfBirth'] = this.transformDate(linkProp.birthDate[0]);
+              if (linkProp.birthPlace) link['placeOfBirth'] ={ place: linkProp.birthPlace[0]};
+              if (linkProp.country) {
+                let countries = [];
+                linkProp.country.forEach((country) => {
+                  const place = {
+                    isoCode: country,
+                    name: getName(country, 'en'),
+                  };
+                  countries.push(place);
+                });
+                const filtered = countries.filter((country) => country.name);
+                if (filtered.length > 0) link['citizenships'] = filtered;
+              }
+              if (linkProp.nationality) {
+                let countries = [];
+                linkProp.nationality.forEach((country) => {
+                  const place = {
+                    isoCode: country,
+                    name: getName(country, 'en'),
+                  };
+                  countries.push(place);
+                });
+                const filtered = countries.filter((country) => country.name);
+                if (filtered.length > 0) link['nationalities'] = filtered;
+              }
+            }
+            return link;
+          });
+          relations = relations.concat(cleanLinks);
+
+          entity['relations'] = relations;
+          //createdAt
+
+          //console.log(prop.unknownLinkTo[0].properties.object[0].properties);
+          console.log(prop);
+        }
+        if (prop.first_seen) entity['createdAt'] = prop.first_seen;
+        //updatedAt
+        if (prop.last_seen) entity['updatedAt'] = prop.last_seen;
+      }
+      dataArray.push(entity);
+    }
+
+    //console.log(dataArray.filter((elt) => elt.addresses));
+  }
+
+  async mapPep() {
+    this.logger.log('====== Mapping Cleaning & Saving data From PEP Source...');
+    const SOURCE_DIR = this.config.get('SOURCE_DIR');
+    const data = await this.downloadData('liste_PEP.json');
+
+    return data.slice(0, 100);
+  }
+
   //Liste consolidée de sanctions financières de l’UE
   // async getSanctionPep() {
   //   const data = await this.downloadData('liste_PEP.json');
@@ -1547,5 +1844,38 @@ export class MigrationHelper {
     writeStream.end();
   }
 
-  
+  transformDate(date: string): { day?: string; month?: string; year?: string } {
+    const reg = /[-/\\]/;
+    if (date.includes('\\z') || date.includes('/') || date.includes('-')) {
+      const arrayDate = date.split(reg);
+      if (arrayDate.length < 3) {
+        if (arrayDate[0].length > 3) {
+          return {
+            month: arrayDate[1],
+            year: arrayDate[0],
+          };
+        } else {
+          return {
+            month: arrayDate[0],
+            year: arrayDate[1],
+          };
+        }
+      } else {
+        if (arrayDate[0].length > 3) {
+          return {
+            day: arrayDate[2],
+            month: arrayDate[1],
+            year: arrayDate[0],
+          };
+        } else {
+          return {
+            day: arrayDate[0],
+            month: arrayDate[1],
+            year: arrayDate[2],
+          };
+        }
+      }
+    }
+    return { year: date };
+  }
 }

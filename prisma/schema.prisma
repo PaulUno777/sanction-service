@@ -10,6 +10,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+type Relationship {
+  nature            String?
+  defaultName       String?
+  type              String?
+  alias             String[]
+  gender            String?
+  positions         String?
+  notes             String[]
+  deathDate         String?
+  dateOfBirth       DateObject?
+  incorporationDate DateObject?
+  placeOfBirth      PlaceOfBirth?
+  nationalities     Nationality[]
+  citizenships      Citizenship[]
+}
+
+model PoliticallyExposed {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  firstName         String?
+  lastName          String?
+  defaultName       String?
+  alias             String[]
+  type              String?
+  gender            String?
+  positions         String[]
+  notes             String[]
+  dateOfBirth       DateObject?
+  incorporationDate DateObject?
+  placeOfBirth      String[]
+  websites          String?
+  publicationUrl    String?
+
+  addresses     Address[]
+  nationalities Nationality[]
+  citizenships  Citizenship[]
+  othersInfos   Info[]
+  relationships Relationship[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
 model SanctionList {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
@@ -37,7 +80,7 @@ model Sanctioned {
   gender         Gender?
   type           String?
   akas           String[]      @default([])
-  dateOfBirth    DateOfBith?
+  dateOfBirth    DateObject?
   placeOfBirth   PlaceOfBirth?
   title          String?
   remarks        String?
@@ -45,7 +88,7 @@ model Sanctioned {
   references     String[]      @default([])
   publicationUrl String?
 
-  addresses     Addresse[]
+  addresses     Address[]
   nationalities Nationality[]
   citizenships  Citizenship[]
   othersInfos   Info[]
@@ -85,7 +128,7 @@ type Country {
   name    String?
 }
 
-type DateOfBith {
+type DateObject {
   day   String?
   month String?
   year  String?
@@ -98,7 +141,7 @@ type PlaceOfBirth {
   country         Country?
 }
 
-type Addresse {
+type Address {
   place           String?
   stateOrProvince String?
   postalCode      String?
