@@ -1571,7 +1571,7 @@ export class MigrationHelper {
         //placeOfBirth
         if (prop.birthPlace) entity['placeOfBirth'] = prop.birthPlace;
         //website
-        if (prop.website) entity['website'] = prop.website[0];
+        if (prop.website) entity['websites'] = prop.website[0];
         //publicationUrl
         if (prop.sourceUrl) entity['publicationUrl'] = prop.sourceUrl[0];
         //addresses
@@ -1599,7 +1599,7 @@ export class MigrationHelper {
           prop.country.forEach((country) => {
             const place = {
               isoCode: country,
-              name: getName(country, 'en'),
+              country: getName(country, 'en'),
             };
             countries.push(place);
           });
@@ -1614,12 +1614,12 @@ export class MigrationHelper {
           prop.nationality.forEach((country) => {
             const place = {
               isoCode: country,
-              name: getName(country, 'en'),
+              country: getName(country, 'en'),
             };
             countries.push(place);
           });
           const filtered = countries.filter(
-            (country) => country.isoCode.length == 2 || country.name,
+            (country) => country.isoCode.length == 2 || country.country,
           );
           if (filtered.length > 0) entity['nationalities'] = filtered;
         }
@@ -1713,7 +1713,7 @@ export class MigrationHelper {
                 linkProp.country.forEach((country) => {
                   const place = {
                     isoCode: country,
-                    name: getName(country, 'en'),
+                    country: getName(country, 'en'),
                   };
                   countries.push(place);
                 });
@@ -1758,7 +1758,7 @@ export class MigrationHelper {
                 linkProp.country.forEach((country) => {
                   const place = {
                     isoCode: country,
-                    name: getName(country, 'en'),
+                    country: getName(country, 'en'),
                   };
                   countries.push(place);
                 });
@@ -1770,7 +1770,7 @@ export class MigrationHelper {
                 linkProp.nationality.forEach((country) => {
                   const place = {
                     isoCode: country,
-                    name: getName(country, 'en'),
+                    country: getName(country, 'en'),
                   };
                   countries.push(place);
                 });
@@ -1786,7 +1786,6 @@ export class MigrationHelper {
           //createdAt
 
           //console.log(prop.unknownLinkTo[0].properties.object[0].properties);
-          console.log(prop);
         }
         if (prop.first_seen) entity['createdAt'] = prop.first_seen;
         //updatedAt
@@ -1795,7 +1794,7 @@ export class MigrationHelper {
       dataArray.push(entity);
     }
 
-    //console.log(dataArray.filter((elt) => elt.addresses));
+    return dataArray;
   }
 
   async mapPep() {

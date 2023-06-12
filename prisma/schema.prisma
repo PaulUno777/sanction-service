@@ -99,7 +99,7 @@ model Sanctioned {
 
 type Info {
   type           String?
-  value          String?
+  value          Json?
   comment        String?
   issueDate      String?
   expirationDate String?

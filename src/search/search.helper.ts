@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Workbook } from 'exceljs';
 import { ConfigService } from '@nestjs/config';
-import { unlink } from 'fs';
 import * as StringSimilarity from 'string-similarity';
 import { SearchOutput } from './dto/search.output.dto';
 import { SearchParamDto } from './dto/search.param.dto';
 import { Nationality } from './dto/Sanctioned.entity';
+import { existsSync, mkdirSync, unlink } from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class SearchHelper {
@@ -244,8 +245,13 @@ export class SearchHelper {
     //write the
     const name = `${searchInput}.xlsx`;
     const fileName = name.replace(/\s/g, '');
-    const publicDir = this.config.get('FILE_LOCATION');
-    const pathToFile = publicDir + fileName;
+    const PUBLIC_DIR = this.config.get('FILE_LOCATION');
+    const pathToFile = PUBLIC_DIR + fileName;
+
+    if (!existsSync(join(process.cwd(), PUBLIC_DIR))) {
+      mkdirSync(join(process.cwd(), PUBLIC_DIR));
+      console.log('public directory created');
+    }
 
     await unlink(pathToFile, function (err) {
       if (err) {

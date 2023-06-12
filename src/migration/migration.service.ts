@@ -26,6 +26,9 @@ export class MigrationService {
     await this.mongoDeleteMany('Sanctioned', client).finally(() =>
       client.close(),
     );
+    await this.mongoDeleteMany('PoliticallyExposed', client).finally(() =>
+      client.close(),
+    );
     const result = await Promise.all([
       await this.migrateSanctionList(),
       await this.migrateSanctionedIta(),
@@ -128,6 +131,7 @@ export class MigrationService {
 
   //migrate PEPS data
   async migratePep() {
+    this.logger.log('migrationg Politically Exposed Person Collection...');
     const list = await this.helper.getPepList()
 
     //push data in data in batches of 1000 to avoid errors and timeouts
@@ -135,15 +139,15 @@ export class MigrationService {
     let result;
     let count = 0;
     //ITA
-    if (list.length <= 2000) {
-      result = await this.prisma.sanctioned.createMany({ data: list });
+    if (list.length <= 2) {
+      result = await this.prisma.politicallyExposed.createMany({ data: list });
       count += result.count;
     } else {
-      for (let i = 0; i <= list.length; i += 1000) {
+      for (let i = 0; i <= list.length; i += 10) {
         if (i >= list.length) i = list.length;
-        data = list.slice(i, i + 1000);
+        data = list.slice(i, i + 10);
         if (data.length > 0) {
-          result = await this.prisma.sanctioned.createMany({ data: data });
+          result = await this.prisma.politicallyExposed.createMany({ data: data });
         }
 
 
@@ -203,6 +207,6 @@ export class MigrationService {
     this.logger.log('All jobs perform  well !');
   }
   async test() {
-    return await this.helper.getPepList();
+    return await this.migratePep();
   }
 }
